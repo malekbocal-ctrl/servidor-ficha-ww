@@ -15,7 +15,12 @@ var KEYS = {"Força":"fo","Destreza":"des","Agilidade":"agi","Energia":"eng","Vi
 var ABBR = {FOR:"fo",DEX:"des",AGI:"agi",ENG:"eng",VIG:"vig",INT:"int"};
 
 /* ---- Sistema de pontos ---- */
-var POINTS = 120, CLASS_COST = 20, MAX_CLASSES = 2;
+var POINTS = 120, CLASS_COST = 20, MAX_CLASSES = 2, FUNC_COST = 5;
+/* Cada função de bordo custa FUNC_COST pts. Várias funções são separadas por vírgula, / ou ; */
+function funcCount(){
+  var t = (S.ident && S.ident.funcao) || "";
+  return t.split(/[,;\/]+/).filter(function(x){ return x.trim() !== ""; }).length;
+}
 var CLASSES = [
   {n:"Imprudente", tag:"Movimento duplo e imprevisibilidade", free:{"Duro de Matar":1}, items:[
     ["passivas","Freestyle vantajoso","","Vantagem em testes de Freestyle."],
@@ -80,7 +85,8 @@ function spentParts(list){
   Object.keys(BASE).forEach(function(k){ at += BASE[k]; });
   APTS.forEach(function(a){ ap += (S.apt[a.n] || 0) * aptUnit(a, list); });
   var cl = list.length * CLASS_COST;
-  return {at:at, cl:cl, ap:ap, total:at + cl + ap};
+  var fn = funcCount() * FUNC_COST;
+  return {at:at, cl:cl, ap:ap, fn:fn, total:at + cl + ap + fn};
 }
 function toast(m){
   var t = $id("toast"); if(!t){ return; }
@@ -278,7 +284,7 @@ function updPoints(){
   var p = spentParts(S.classes), left = POINTS - p.total;
   lf.textContent = left;
   $id("pts").classList.toggle("full", left <= 0);
-  $id("pts-det").textContent = "Gastos " + p.total + " de " + POINTS + " · Atributos " + p.at + " · Classes " + p.cl + " · Aptidões " + p.ap;
+  $id("pts-det").textContent = "Gastos " + p.total + " de " + POINTS + " · Atributos " + p.at + " · Classes " + p.cl + " · Aptidões " + p.ap + " · Funções " + p.fn;
   var w = $id("pts-warn"), wt = "";
   if(left < 0){ wt = (-left) + " ponto" + (left === -1 ? "" : "s") + " acima do limite: compras bloqueadas."; }
   else if(left === 0){ wt = "Limite atingido: compras bloqueadas."; }
@@ -517,7 +523,9 @@ function syncMute(){
   var t = music.muted ? "Ativar o som da música" : "Silenciar a música";
   muteBtn.textContent = music.muted ? "🔇" : "🔊"; muteBtn.title = t; muteBtn.setAttribute("aria-label", t);
 }
+function isPlay(){ return document.body.classList.contains("play"); }
 function showMute(){
+  if(!awakened || !isPlay()){ return; }
   if(!muteBtn){
     muteBtn = el("button", "mute-btn"); muteBtn.type = "button";
     muteBtn.addEventListener("click", function(){ if(music){ music.muted = !music.muted; syncMute(); } });
@@ -535,6 +543,7 @@ function ensureMusic(){
   return music;
 }
 function playAwakeMusic(){
+  if(!isPlay()){ return; }
   try {
     var a = ensureMusic(); clearInterval(fadeT);
     var AC = window.AudioContext || window.webkitAudioContext;
@@ -564,6 +573,11 @@ function stopAwakeMusic(){
     if(k >= 1){ clearInterval(fadeT); music.pause(); music.currentTime = 0; }
   }, 60);
 }
+
+document.addEventListener("ww-mode", function(){
+  if(isPlay() && awakened){ if(!music || music.paused){ playAwakeMusic(); } }
+  else { stopAwakeMusic(); }
+});
 
 function toggleAwake(){
   if(!awakened){
@@ -984,7 +998,7 @@ APTS.forEach(function(a){ var v = parseInt(S.apt[a.n], 10); S.apt[a.n] = isNaN(v
 document.querySelectorAll(".ed-id").forEach(function(e){
   var k = e.getAttribute("data-k");
   e.textContent = S.ident[k] !== undefined ? S.ident[k] : DEF.ident[k];
-  makeEditable(e, e.getAttribute("data-ph"), function(v){ S.ident[k] = v; save(); stSchedule(); });
+  makeEditable(e, e.getAttribute("data-ph"), function(v){ S.ident[k] = v; if(k === "funcao"){ updPoints(); } save(); stSchedule(); });
 });
 
 function buildLogo(){

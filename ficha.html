@@ -242,6 +242,7 @@ body.play .item.awake .use.on{background:var(--red);border-color:var(--red);colo
 .mute-btn:hover{filter:brightness(1.15)}
 .mute-btn:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
 @media print{.mute-btn{display:none}}
+body:not(.play) .item.awake .use{display:none}
 </style>
 </head>
 <body>
@@ -295,7 +296,7 @@ body.play .item.awake .use.on{background:var(--red);border-color:var(--red);colo
     <div class="hd"><div class="hd-txt">
       <h1 class="ed-id" data-k="nome" data-ph="Nome"></h1>
       <div class="id">
-        <span>Função de bordo: <b class="ed-id" data-k="funcao" data-ph="função"></b></span>
+        <span title="Cada função de bordo custa 5 pts. Separe várias funções por vírgula.">Função de bordo: <b class="ed-id" data-k="funcao" data-ph="função"></b></span>
         <span>Doutrina: <b class="ed-id" data-k="doutrina" data-ph="doutrina"></b></span>
         <span>Classe: <b class="ed-id" data-k="classe" data-ph="classe"></b></span>
         <span>Deslocamento: <b id="desl">5</b></span>
@@ -409,10 +410,9 @@ body.play .item.awake .use.on{background:var(--red);border-color:var(--red);colo
     document.dispatchEvent(new Event("ww-mode"));
     b.setAttribute("aria-pressed", String(on));
     b.textContent = on ? "Modo edição" : "Modo sessão";
-    try { localStorage.setItem("ww-play", on ? "1" : "0"); } catch(e){}
   }
-  var was = false; try { was = localStorage.getItem("ww-play") === "1"; } catch(e){}
-  set(was);
+  /* Sempre abre em modo edição */
+  set(false);
   b.addEventListener("click", function(){ set(!document.body.classList.contains("play")); });
 })();
 </script>
@@ -464,7 +464,7 @@ body.play .item.awake .use.on{background:var(--red);border-color:var(--red);colo
     document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden"){ flush(); } });
     window.addEventListener("pagehide", function(){ flush(); });
     var s = document.createElement("script");
-    s.src = "sheet.js?v=5";
+    s.src = "sheet.js?v=6";
     s.onload = function(){ window.CLOUD.armed = true; msg.hidden = true; main.classList.remove("loading"); say("Salvo na nuvem ✓", "ok"); };
     s.onerror = function(){ fail("Não foi possível carregar o arquivo sheet.js."); };
     document.body.appendChild(s);
