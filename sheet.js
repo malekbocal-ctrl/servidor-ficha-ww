@@ -175,9 +175,7 @@ function updPoints(){
   var p = spentParts(S.classes), left = POINTS - p.total;
   lf.textContent = left;
   $id("pts").classList.toggle("full", left <= 0);
-  $id("pts-fill").style.width = Math.min(100, Math.max(0, 100 * p.total / POINTS)) + "%";
-  $id("pts-bar").setAttribute("aria-valuenow", Math.min(p.total, POINTS));
-  $id("pts-det").textContent = "Gastos: " + p.total + " de " + POINTS + " · Atributos " + p.at + " · Classes " + p.cl + " · Aptidões " + p.ap;
+  $id("pts-det").textContent = "Gastos " + p.total + " de " + POINTS + " · Atributos " + p.at + " · Classes " + p.cl + " · Aptidões " + p.ap;
   var w = $id("pts-warn"), wt = "";
   if(left < 0){ wt = "Você está " + (-left) + " ponto" + (left === -1 ? "" : "s") + " acima do limite de " + POINTS + ". Compras bloqueadas até reduzir os gastos."; }
   else if(left === 0){ wt = "Limite de " + POINTS + " pontos atingido. Compras bloqueadas."; }

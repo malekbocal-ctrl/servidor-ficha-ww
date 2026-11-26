@@ -159,16 +159,13 @@ a.mini{text-decoration:none;display:inline-block}
 .cst{font-size:.85rem;color:var(--muted)} .cst.ok{color:var(--fillb)} .cst.err{color:var(--red)}
 .sheet.loading{visibility:hidden}
 #boot-msg{max-width:640px;margin:60px auto;padding:20px;text-align:center;color:var(--muted)}
-.pts{background:var(--panel);border:1px solid var(--line);padding:12px 16px;margin-top:18px}
-.pts-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-.pts-ttl{font-family:"Pirata One",Georgia,serif;font-size:1.3rem}
-.pts-num{color:var(--muted)} .pts-num b{font-size:1.5rem;color:var(--ink)}
-.pts.full .pts-num b{color:var(--red)}
-.pts-bar{height:12px;border-radius:3px;background:var(--line);margin:8px 0 6px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.pts-bar i{display:block;height:100%;width:0;background:var(--sea);transition:width .2s}
-.pts.full .pts-bar i{background:var(--red)}
+.pts{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin-top:16px;padding:10px 16px;border:2px solid var(--sea);background:var(--bg);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pts-main{display:flex;align-items:baseline;gap:10px}
+.pts-main b{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:3rem;line-height:1;color:var(--sea)}
+.pts-main span{font-size:1.05rem;font-weight:700}
 .pts-det{font-size:.9rem;color:var(--muted)}
-.pts-warn{margin-top:8px;padding:6px 10px;border:1px solid var(--red);color:var(--red);font-weight:700;font-size:.95rem}
+.pts.full{border-color:var(--red)} .pts.full .pts-main b{color:var(--red)}
+.pts-warn{flex:1 0 100%;padding:6px 10px;border:1px solid var(--red);color:var(--red);font-weight:700;font-size:.95rem}
 .blocked{opacity:.45;cursor:not-allowed}
 .item.sel{border-color:var(--sea)}
 .item.sel .use{background:var(--sea);color:var(--panel)}
@@ -242,6 +239,11 @@ a.mini{text-decoration:none;display:inline-block}
         <span>Deslocamento: <b id="desl">5</b></span>
         <span id="awake-tag" class="tag" hidden>Despertado</span>
       </div>
+      <div class="pts" id="pts">
+        <div class="pts-main"><b id="pts-left">120</b><span>pontos restantes</span></div>
+        <div class="pts-det" id="pts-det"></div>
+        <div class="pts-warn" id="pts-warn" role="alert" hidden></div>
+      </div>
     </div>
     <label class="portrait" id="portrait" title="Clique para enviar uma imagem">
       <span class="ph" id="pt-ph">Aparência do personagem<br><small>clique para enviar uma imagem</small></span>
@@ -262,13 +264,6 @@ a.mini{text-decoration:none;display:inline-block}
         <div class="top"><label for="est">Energia (Estamina)</label><span class="val"><input id="estc" type="number" inputmode="numeric" min="0" aria-label="Estamina atual"> / <input id="estm" type="number" inputmode="numeric" min="0" aria-label="Estamina máxima"></span></div>
         <input id="est" type="range" min="0" max="0" step="1" value="0">
       </div>
-    </div>
-
-    <div class="pts" id="pts" aria-labelledby="pts-t">
-      <div class="pts-top"><span id="pts-t" class="pts-ttl">Pontos</span><span class="pts-num"><b id="pts-left">120</b> restantes</span></div>
-      <div class="pts-bar" id="pts-bar" role="progressbar" aria-label="Pontos gastos" aria-valuemin="0" aria-valuemax="120" aria-valuenow="0"><i id="pts-fill"></i></div>
-      <div class="pts-det" id="pts-det"></div>
-      <div class="pts-warn" id="pts-warn" role="alert" hidden></div>
     </div>
 
     <h2>Atributos</h2>
@@ -292,12 +287,6 @@ a.mini{text-decoration:none;display:inline-block}
       <div class="stat"><div class="v">4</div><div class="n">Freestyle</div><div class="f">4 + 0</div></div>
       <div class="stat"><div class="v">2</div><div class="n">Técnica</div><div class="f">2 + 0</div></div>
     </div>
-
-    <h2>Classes <small class="cst">(até 2 · 20 pts cada)</small></h2>
-    <div id="classes"></div>
-
-    <h2>Aptidões</h2>
-    <div id="aptidoes"></div>
   </div>
 
   <div class="col">
@@ -315,6 +304,12 @@ a.mini{text-decoration:none;display:inline-block}
 
     <h2 class="hrow"><span>Habilidades passivas de classe</span><span class="btns"><button class="mini" type="button" data-add="passivas">+ Habilidade passiva</button></span></h2>
     <div id="passivas"></div>
+
+    <h2>Classes <small class="cst">(até 2 · 20 pts cada)</small></h2>
+    <div id="classes"></div>
+
+    <h2>Aptidões</h2>
+    <div id="aptidoes"></div>
   </div>
   </div>
 </main>
