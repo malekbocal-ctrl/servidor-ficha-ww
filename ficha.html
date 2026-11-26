@@ -159,6 +159,29 @@ a.mini{text-decoration:none;display:inline-block}
 .cst{font-size:.85rem;color:var(--muted)} .cst.ok{color:var(--fillb)} .cst.err{color:var(--red)}
 .sheet.loading{visibility:hidden}
 #boot-msg{max-width:640px;margin:60px auto;padding:20px;text-align:center;color:var(--muted)}
+.pts{background:var(--panel);border:1px solid var(--line);padding:12px 16px;margin-top:18px}
+.pts-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pts-ttl{font-family:"Pirata One",Georgia,serif;font-size:1.3rem}
+.pts-num{color:var(--muted)} .pts-num b{font-size:1.5rem;color:var(--ink)}
+.pts.full .pts-num b{color:var(--red)}
+.pts-bar{height:12px;border-radius:3px;background:var(--line);margin:8px 0 6px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.pts-bar i{display:block;height:100%;width:0;background:var(--sea);transition:width .2s}
+.pts.full .pts-bar i{background:var(--red)}
+.pts-det{font-size:.9rem;color:var(--muted)}
+.pts-warn{margin-top:8px;padding:6px 10px;border:1px solid var(--red);color:var(--red);font-weight:700;font-size:.95rem}
+.blocked{opacity:.45;cursor:not-allowed}
+.item.sel{border-color:var(--sea)}
+.item.sel .use{background:var(--sea);color:var(--panel)}
+.desc p.pl{white-space:pre-line}
+.item.apt .head{flex-wrap:wrap}
+.item.apt .nm{flex:1 1 9em}
+.apt-fr{font-size:.85rem;color:var(--fillb)}
+.apt-ct{font-weight:700;min-width:2ch;text-align:center}
+.item.apt.owned .nm{color:var(--sea)}
+.mini:disabled{opacity:.4;cursor:not-allowed}
+.stp{min-width:32px;font-weight:700}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));max-width:min(92vw,520px);z-index:50;background:var(--ink);color:var(--bg);border-left:4px solid var(--red);padding:10px 16px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+@media print{.stp,#toast,.pts-warn{display:none}}
 </style>
 </head>
 <body>
@@ -241,6 +264,13 @@ a.mini{text-decoration:none;display:inline-block}
       </div>
     </div>
 
+    <div class="pts" id="pts" aria-labelledby="pts-t">
+      <div class="pts-top"><span id="pts-t" class="pts-ttl">Pontos</span><span class="pts-num"><b id="pts-left">120</b> restantes</span></div>
+      <div class="pts-bar" id="pts-bar" role="progressbar" aria-label="Pontos gastos" aria-valuemin="0" aria-valuemax="120" aria-valuenow="0"><i id="pts-fill"></i></div>
+      <div class="pts-det" id="pts-det"></div>
+      <div class="pts-warn" id="pts-warn" role="alert" hidden></div>
+    </div>
+
     <h2>Atributos</h2>
     <div class="row">
       <div class="stat"><div class="v">0</div><div class="n">Força</div></div>
@@ -262,6 +292,12 @@ a.mini{text-decoration:none;display:inline-block}
       <div class="stat"><div class="v">4</div><div class="n">Freestyle</div><div class="f">4 + 0</div></div>
       <div class="stat"><div class="v">2</div><div class="n">Técnica</div><div class="f">2 + 0</div></div>
     </div>
+
+    <h2>Classes <small class="cst">(até 2 · 20 pts cada)</small></h2>
+    <div id="classes"></div>
+
+    <h2>Aptidões</h2>
+    <div id="aptidoes"></div>
   </div>
 
   <div class="col">
@@ -283,6 +319,8 @@ a.mini{text-decoration:none;display:inline-block}
   </div>
 </main>
 
+
+<div id="toast" role="alert" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>

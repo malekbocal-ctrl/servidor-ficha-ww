@@ -142,6 +142,16 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
     });
   });
 
+  // Enter nos campos aciona o botão principal (Entrar ou Criar conta, conforme o modo)
+  ["nm", "em", "pw"].forEach(function(id){
+    $(id).addEventListener("keydown", function(ev){
+      if(ev.key === "Enter" && !ev.isComposing){
+        ev.preventDefault();
+        if(!$("go").disabled){ $("go").click(); }
+      }
+    });
+  });
+
   // ---- lista de fichas ----
   function fmtDate(s){
     try { return new Date(s).toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"}); } catch(e){ return ""; }

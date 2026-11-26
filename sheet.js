@@ -14,11 +14,198 @@ var NEW = {
 var KEYS = {"Força":"fo","Destreza":"des","Agilidade":"agi","Energia":"eng","Vigor":"vig","Inteligência":"int"};
 var ABBR = {FOR:"fo",DEX:"des",AGI:"agi",ENG:"eng",VIG:"vig",INT:"int"};
 
-var S = {ident:{}}, BASE = {fo:0,des:0,agi:0,eng:0,vig:0,int:0};
+/* ---- Sistema de pontos ---- */
+var POINTS = 120, CLASS_COST = 20, MAX_CLASSES = 2;
+var CLASSES = [
+  {n:"Imprudente", free:{"Duro de Matar":1}, items:[
+    ["passivas","Freestyle vantajoso","","Vantagem em testes de Freestyle."],
+    ["passivas","Movimento duplo","","Em combate, pode fazer duas ações de movimento."],
+    ["passivas","Imprevisibilidade","","Não pode ser contra-atacado nem defendido, apenas esquivado."]
+  ]},
+  {n:"Especialista", free:{}, items:[
+    ["passivas","Haki mais rápido","","Reduz o tempo de recarga de um dos tipos de Haki, à escolha do personagem."],
+    ["passivas","Profissão vantajosa","","Vantagem em testes de Profissão."],
+    ["passivas","Mestre de técnicas","","Despertar custa metade do preço (4 pts) e Criação também (3 pts). O contador de pontos aplica o desconto."]
+  ]},
+  {n:"Combatente", free:{}, items:[
+    ["passivas","Artes marciais vantajosas","","Vantagem em testes que utilizam arte marcial."],
+    ["passivas","Determinação +1","","+1 ponto de determinação."],
+    ["passivas","Bloquear agressivo","","Pode usar Bloquear Agressivo em batalhas 1 contra 1."],
+    ["ativas","Giro de dano","1x por combate","Gira o dano duas vezes em um inimigo específico."]
+  ]},
+  {n:"Infantaria", free:{"Criação":2}, items:[
+    ["passivas","Doutrina armada vantajosa","","Vantagem em testes utilizando qualquer doutrina armada."],
+    ["passivas","Doutrina Polivalente","","Aptidão gratuita: Doutrina Polivalente."],
+    ["ativas","Golpe de doutrina","3x por combate","Sangramento, queimação e atordoamento sempre garantidos em qualquer ataque utilizando sua doutrina."]
+  ]},
+  {n:"Maestro", free:{}, items:[
+    ["ativas","Incentivar","3x por combate","Dá vantagem nos testes de companheiros de tripulação."],
+    ["passivas","Ação de movimento cedida","","Pode abrir mão da sua ação de movimento para que um companheiro tenha uma ação de movimento extra no próximo turno."],
+    ["passivas","Iniciativa dominante","","Sempre que tirar o maior resultado de iniciativa em um combate, começa podendo atacar duas vezes ou se movimentar duas vezes."],
+    ["ativas","Maestro dos turnos","1x por sessão","Define a ordem dos turnos em um combate: decide quem vai primeiro, segundo, por último e assim por diante."]
+  ]}
+];
+var APTS = [
+  {n:"Acuidade", cost:4, d:"Usa combate corporal e combate a distância com o mesmo atributo (Força ou Destreza)."},
+  {n:"Versátil", cost:4, d:"Usa Técnica e Freestyle com o mesmo atributo (Força ou Destreza)."},
+  {n:"Bloqueio Agressivo", cost:4, d:"Ao usar uma ação de bloqueio, o personagem pode imediatamente contra-atacar caso a diferença do dado seja de mais de 5 no resultado."},
+  {n:"Espadachim", cost:4, max:3, d:"Pode usar Itoryu com espadas sem desvantagem e realizar ataques com elas sem penalidade. Na segunda compra pode usar Nitoryu; na terceira, Santoryu. Máximo de 3 compras."},
+  {n:"Boxe", cost:4, d:"Vira um usuário exímio de luta com as mãos: +3 em combate corpo a corpo e +1 em esquiva por compra."},
+  {n:"Atirador", cost:4, max:4, d:"Pode usar armas de fogo sem desvantagem e realizar disparos sem penalidade, com +2 em testes de combate a distância. Máximo de 4 compras."},
+  {n:"Black Leg", cost:4, max:3, d:"Vira um usuário exímio de luta com os pés: +2 em combate corpo a corpo quando usados apenas os pés, além de +4 em deslocamento. Máximo de 3 compras."},
+  {n:"Ágil", cost:6, d:"Vantagem em esquiva."},
+  {n:"Parrudo", cost:4, d:"Perde 5 m de deslocamento para ganhar +50 de HP."},
+  {n:"Criação", cost:6, d:"Pode ser comprada quantas vezes quiser. Permite criar as técnicas (de akuma e de doutrinas)."},
+  {n:"Despertar", cost:8, d:"Pode ser comprada quantas vezes quiser. Permite criar as transformações (de akuma e de doutrina)."},
+  {n:"Duro de Matar", cost:4, d:"Ao tomar um dano massivo, o personagem pode gastar esta aptidão uma vez por sessão para sobreviver com 1 de vida."}
+];
+var ptsReg = {cls:[], apt:[]}, toastT = null;
+function $id(i){ return document.getElementById(i); }
+function classObj(n){ return CLASSES.filter(function(c){ return c.n === n; })[0] || null; }
+function freeApt(n, list){
+  var t = 0;
+  (list || S.classes).forEach(function(c){ var o = classObj(c); if(o && o.free[n]){ t += o.free[n]; } });
+  return t;
+}
+function aptUnit(a, list){
+  var l = list || S.classes;
+  if((a.n === "Despertar" || a.n === "Criação") && l.indexOf("Especialista") > -1){ return a.cost / 2; }
+  return a.cost;
+}
+function spentParts(list){
+  var at = 0, ap = 0;
+  Object.keys(BASE).forEach(function(k){ at += BASE[k]; });
+  APTS.forEach(function(a){ ap += (S.apt[a.n] || 0) * aptUnit(a, list); });
+  var cl = list.length * CLASS_COST;
+  return {at:at, cl:cl, ap:ap, total:at + cl + ap};
+}
+function toast(m){
+  var t = $id("toast"); if(!t){ return; }
+  t.textContent = m; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(function(){ t.hidden = true; }, 5000);
+}
+function canSpend(cost){
+  var left = POINTS - spentParts(S.classes).total;
+  if(left <= 0){ toast("Limite de " + POINTS + " pontos atingido. Compras bloqueadas: libere pontos antes de comprar mais."); return false; }
+  if(cost > left){ toast("Pontos insuficientes: custa " + cost + " e restam " + left + "."); return false; }
+  return true;
+}
+function syncClasse(){
+  S.ident.classe = S.classes.join(" / ");
+  var e = document.querySelector('.ed-id[data-k="classe"]');
+  if(e){ e.textContent = S.ident.classe; }
+}
+function addClassItems(c){
+  c.items.forEach(function(a){ S[a[0]].push({id:nid++, n:a[1], c:a[2], d:a[3], cls:c.n}); });
+}
+function removeClassItems(name){
+  SECS.forEach(function(k){
+    S[k] = S[k].filter(function(x){ if(x.cls === name){ delete uses[x.id]; return false; } return true; });
+  });
+}
+function toggleClass(c){
+  var i = S.classes.indexOf(c.n);
+  if(i > -1){
+    var next = S.classes.filter(function(x){ return x !== c.n; });
+    var after = spentParts(next).total;
+    if(after > POINTS && after > spentParts(S.classes).total){
+      toast("Não é possível remover " + c.n + ": sem os descontos dela suas compras passariam de " + POINTS + " pontos. Remova alguma compra antes.");
+      return;
+    }
+    S.classes = next; removeClassItems(c.n);
+  } else {
+    if(S.classes.length >= MAX_CLASSES){ toast("Cada personagem pode ter no máximo " + MAX_CLASSES + " classes."); return; }
+    if(!canSpend(CLASS_COST)){ return; }
+    S.classes.push(c.n); addClassItems(c);
+  }
+  syncClasse(); renderAll(); show();
+}
+function buyApt(a){
+  var owned = (S.apt[a.n] || 0) + freeApt(a.n);
+  if(a.max && owned >= a.max){ toast("Limite de " + a.max + " compras de " + a.n + " atingido."); return; }
+  if(!canSpend(aptUnit(a))){ return; }
+  S.apt[a.n] = (S.apt[a.n] || 0) + 1; show();
+}
+function sellApt(a){
+  if((S.apt[a.n] || 0) > 0){ S.apt[a.n]--; show(); }
+}
+function mkExpand(d){
+  var ex = el("button", "ico exp"); ex.type = "button"; ex.textContent = "▾"; ex.setAttribute("aria-label", "Mostrar descrição");
+  ex.addEventListener("click", function(){ d.classList.toggle("open"); });
+  return ex;
+}
+function mkDesc(text){
+  var w = el("div", "desc"), i = el("div"), p = el("p", "pl"); p.textContent = text;
+  i.appendChild(p); w.appendChild(i); return w;
+}
+function classText(c){
+  var L = c.items.map(function(a){ return "• " + a[1] + ": " + a[3]; });
+  Object.keys(c.free).forEach(function(k){ L.push("• Aptidão grátis: " + k + (c.free[k] > 1 ? " (×" + c.free[k] + ")" : "") + "."); });
+  return L.join("\n");
+}
+function buildPoints(){
+  var cr = $id("classes"), ar = $id("aptidoes");
+  if(!cr || !ar){ return; }
+  CLASSES.forEach(function(c){
+    var d = el("div", "item"), h = el("div", "head");
+    var nm = el("span", "nm"); nm.textContent = c.n;
+    var cs = el("span", "cost"); cs.textContent = CLASS_COST + " pts";
+    var b = el("button", "use"); b.type = "button";
+    b.addEventListener("click", function(){ toggleClass(c); });
+    h.appendChild(nm); h.appendChild(cs); h.appendChild(b); h.appendChild(mkExpand(d));
+    d.appendChild(h); d.appendChild(mkDesc(classText(c)));
+    cr.appendChild(d); ptsReg.cls.push({c:c, d:d, b:b});
+  });
+  APTS.forEach(function(a){
+    var d = el("div", "item apt"), h = el("div", "head");
+    var nm = el("span", "nm"); nm.textContent = a.n;
+    var fr = el("span", "apt-fr"), cs = el("span", "cost");
+    var mn = el("button", "mini stp"); mn.type = "button"; mn.textContent = "−"; mn.setAttribute("aria-label", "Remover uma compra de " + a.n);
+    var ct = el("span", "apt-ct"); ct.setAttribute("aria-live", "polite");
+    var pl = el("button", "mini stp"); pl.type = "button"; pl.textContent = "+"; pl.setAttribute("aria-label", "Comprar " + a.n);
+    mn.addEventListener("click", function(){ sellApt(a); });
+    pl.addEventListener("click", function(){ buyApt(a); });
+    h.appendChild(nm); h.appendChild(fr); h.appendChild(cs); h.appendChild(mn); h.appendChild(ct); h.appendChild(pl); h.appendChild(mkExpand(d));
+    d.appendChild(h); d.appendChild(mkDesc(a.d));
+    ar.appendChild(d); ptsReg.apt.push({a:a, d:d, fr:fr, cs:cs, mn:mn, ct:ct, pl:pl});
+  });
+}
+function updPoints(){
+  var lf = $id("pts-left"); if(!lf){ return; }
+  var p = spentParts(S.classes), left = POINTS - p.total;
+  lf.textContent = left;
+  $id("pts").classList.toggle("full", left <= 0);
+  $id("pts-fill").style.width = Math.min(100, Math.max(0, 100 * p.total / POINTS)) + "%";
+  $id("pts-bar").setAttribute("aria-valuenow", Math.min(p.total, POINTS));
+  $id("pts-det").textContent = "Gastos: " + p.total + " de " + POINTS + " · Atributos " + p.at + " · Classes " + p.cl + " · Aptidões " + p.ap;
+  var w = $id("pts-warn"), wt = "";
+  if(left < 0){ wt = "Você está " + (-left) + " ponto" + (left === -1 ? "" : "s") + " acima do limite de " + POINTS + ". Compras bloqueadas até reduzir os gastos."; }
+  else if(left === 0){ wt = "Limite de " + POINTS + " pontos atingido. Compras bloqueadas."; }
+  if(w.textContent !== wt){ w.textContent = wt; }
+  w.hidden = !wt;
+  ptsReg.cls.forEach(function(r){
+    var on = S.classes.indexOf(r.c.n) > -1;
+    r.d.classList.toggle("sel", on);
+    r.b.textContent = on ? "Remover" : "Escolher";
+    r.b.classList.toggle("blocked", !on && (S.classes.length >= MAX_CLASSES || left < CLASS_COST));
+  });
+  ptsReg.apt.forEach(function(r){
+    var a = r.a, paid = S.apt[a.n] || 0, fr = freeApt(a.n), owned = paid + fr, u = aptUnit(a);
+    r.ct.textContent = owned;
+    r.fr.textContent = fr ? "(" + fr + " grátis)" : "";
+    r.cs.textContent = u + " pts" + (u < a.cost ? " (½)" : "");
+    r.mn.disabled = paid <= 0;
+    r.pl.classList.toggle("blocked", !!((a.max && owned >= a.max) || left < u));
+    r.d.classList.toggle("owned", owned > 0);
+  });
+  document.querySelectorAll(".arrows .upb").forEach(function(b){ b.classList.toggle("blocked", left < 1); });
+}
+
+var S = {ident:{}, classes:[], apt:{}}, BASE = {fo:0,des:0,agi:0,eng:0,vig:0,int:0};
 var atkReg = [], uses = {}, nid = 1, awakened = false, reg = [], lastHM = null, lastEM = null;
 
 function fromDef(){
-  S = {ident: JSON.parse(JSON.stringify(DEF.ident)), ataques: []};
+  S = {ident: JSON.parse(JSON.stringify(DEF.ident)), ataques: [], classes: [], apt: {}};
   SECS.forEach(function(k){ S[k] = DEF[k].map(function(a){ return {id:nid++, n:a[0], c:a[1], d:a[2]}; }); });
 }
 fromDef();
@@ -136,8 +323,12 @@ function addArrows(){
     if(bk){ box.title = "Bônus de " + n; }
     [["▲", 1, "Aumentar "], ["▼", -1, "Diminuir "]].forEach(function(a){
       var b = el("button"); b.type = "button"; b.textContent = a[0]; b.setAttribute("aria-label", a[2] + (bk ? "bônus de " : "") + n);
+      if(k && a[1] > 0){ b.classList.add("upb"); }
       b.addEventListener("click", function(){
-        if(k){ BASE[k] = Math.max(0, BASE[k] + a[1]); } else { BONUS[bk] += a[1]; }
+        if(k){
+          if(a[1] > 0 && !canSpend(1)){ return; }
+          BASE[k] = Math.max(0, BASE[k] + a[1]);
+        } else { BONUS[bk] += a[1]; }
         show();
       });
       box.appendChild(b);
@@ -164,7 +355,7 @@ function addSwitches(){
 }
 
 function refreshUI(){
-  renderStats();
+  renderStats(); updPoints();
   document.body.classList.toggle("awake", awakened);
   document.getElementById("awake-tag").hidden = !awakened;
   document.getElementById("add-despertar").hidden = S.despertar.length > 0;
@@ -613,6 +804,10 @@ try {
   }
 } catch(e){}
 
+S.classes = Array.isArray(S.classes) ? S.classes.filter(function(c, i, a){ return classObj(c) && a.indexOf(c) === i; }).slice(0, MAX_CLASSES) : [];
+if(!S.apt || typeof S.apt !== "object" || Array.isArray(S.apt)){ S.apt = {}; }
+APTS.forEach(function(a){ var v = parseInt(S.apt[a.n], 10); S.apt[a.n] = isNaN(v) || v < 0 ? 0 : v; });
+
 document.querySelectorAll(".ed-id").forEach(function(e){
   var k = e.getAttribute("data-k");
   e.textContent = S.ident[k] !== undefined ? S.ident[k] : DEF.ident[k];
@@ -632,6 +827,7 @@ function buildLogo(){
   g.innerHTML = out;
 }
 buildLogo();
+buildPoints();
 renderAll();
 addArrows();
 addSwitches();
