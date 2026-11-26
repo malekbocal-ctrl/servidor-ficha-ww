@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fichas – Wanted Warriors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --bg:#e9eef0; --panel:#f7f9fa; --ink:#14283b; --muted:#5b6c7b; --line:#b9c6cf;
+  --red:#b5342b; --gold:#a9791c; --sea:#1f6f8b; --fillb:#2f8f5b;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1a26; --panel:#152636; --ink:#e6edf2; --muted:#93a5b4; --line:#2c4256;
+    --red:#e2655b; --gold:#d9a846; --sea:#58b4d1; --fillb:#4cc38a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1a26; --panel:#152636; --ink:#e6edf2; --muted:#93a5b4; --line:#2c4256;
+  --red:#e2655b; --gold:#d9a846; --sea:#58b4d1; --fillb:#4cc38a; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Alegreya Sans",system-ui,sans-serif;font-size:17px;line-height:1.45}
+
+main{max-width:880px;margin:0 auto;padding:28px 22px 48px}
+h1{margin-bottom:6px}
+.sub{color:var(--muted);margin:0 0 22px}
+.card{background:var(--panel);border:1px solid var(--line);padding:18px 20px;margin-bottom:18px}
+label{display:block;font-weight:700;margin:12px 0 4px;font-size:.95rem}
+input[type=text],input[type=email],input[type=password]{width:100%;font:inherit;padding:8px 10px;color:var(--ink);background:var(--bg);border:1px solid var(--line)}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+button,.btn{font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--sea);background:none;color:var(--sea);padding:7px 14px;text-decoration:none;display:inline-block}
+button:hover,.btn:hover{background:var(--sea);color:var(--panel)}
+button.pri{background:var(--sea);color:var(--panel)}
+button.pri:hover{filter:brightness(1.1)}
+button.dng{border-color:var(--red);color:var(--red)}
+button.dng:hover{background:var(--red);color:var(--panel)}
+button.dc{border-color:#5865f2;color:#5865f2}
+button.dc:hover{background:#5865f2;color:#fff}
+button:disabled{opacity:.5;cursor:default}
+.msg{margin-top:12px;font-size:.95rem;color:var(--muted)} .msg.err{color:var(--red)} .msg.ok{color:var(--fillb)}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.who{color:var(--muted)} .badge{display:inline-block;margin-left:6px;padding:1px 8px;border:1px solid var(--gold);color:var(--gold);font-size:.8rem;font-weight:700}
+.list{display:grid;gap:10px}
+.item{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);padding:10px 14px}
+.item .nm{flex:1;min-width:0;font-weight:700;font-size:1.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .meta{color:var(--muted);font-size:.85rem}
+h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;color:var(--red);margin:26px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.empty{color:var(--muted)}
+.tabs{display:flex;gap:8px;margin-bottom:6px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Wanted Warriors</h1>
+  <p class="sub">Fichas de personagem</p>
+  <div id="cfg" class="card" hidden></div>
+
+  <section id="login" class="card" hidden aria-labelledby="lg-t">
+    <h2 id="lg-t" class="s" style="margin-top:0">Entrar</h2>
+    <button id="dc-login" class="dc" type="button">Entrar com Discord</button>
+    <p class="msg">ou use e-mail e senha:</p>
+    <div id="nm-wrap" hidden><label for="nm">Seu nome (aparece para o mestre)</label><input id="nm" type="text" autocomplete="nickname"></div>
+    <label for="em">E-mail</label><input id="em" type="email" autocomplete="email">
+    <label for="pw">Senha (mínimo 6 caracteres)</label><input id="pw" type="password" autocomplete="current-password">
+    <div class="row">
+      <button id="go" class="pri" type="button">Entrar</button>
+      <button id="toggle" type="button">Criar conta</button>
+    </div>
+    <div id="lmsg" class="msg" role="status" aria-live="polite"></div>
+  </section>
+
+  <section id="app" hidden>
+    <div class="bar">
+      <div class="who"><span id="uname"></span><span id="ubadge" class="badge" hidden>Mestre</span></div>
+      <button id="out" type="button">Sair</button>
+    </div>
+    <h2 class="s" style="margin-top:0">Minhas fichas</h2>
+    <div id="mine" class="list"></div>
+    <div class="row"><button id="new" class="pri" type="button">+ Nova ficha</button></div>
+    <div id="amsg" class="msg" role="status" aria-live="polite"></div>
+    <div id="all-wrap" hidden>
+      <h2 class="s">Fichas dos jogadores</h2>
+      <div id="all"></div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  function $(id){ return document.getElementById(id); }
+  function el(t, c, txt){ var e = document.createElement(t); if(c){ e.className = c; } if(txt !== undefined){ e.textContent = txt; } return e; }
+
+  if(window.WW_MISSING){
+    var c = $("cfg"); c.hidden = false;
+    c.textContent = window.WW_NOLIB
+      ? "Não foi possível carregar a biblioteca do Supabase. Verifique a conexão com a internet."
+      : "Configure o arquivo config.js com a URL e a chave do seu projeto Supabase (veja o LEIAME).";
+    return;
+  }
+  var sb = window.sb, signup = false, rendering = 0;
+
+  function say(id, t, c){ var e = $(id); e.textContent = t; e.className = "msg" + (c ? " " + c : ""); }
+
+  // ---- login ----
+  function setMode(s){
+    signup = s;
+    $("nm-wrap").hidden = !s;
+    $("go").textContent = s ? "Criar conta" : "Entrar";
+    $("toggle").textContent = s ? "Já tenho conta" : "Criar conta";
+    $("lg-t").textContent = s ? "Criar conta" : "Entrar";
+    $("pw").autocomplete = s ? "new-password" : "current-password";
+    say("lmsg", "");
+  }
+  $("toggle").addEventListener("click", function(){ setMode(!signup); });
+  $("dc-login").addEventListener("click", function(){
+    sb.auth.signInWithOAuth({provider: "discord", options: {redirectTo: location.origin + location.pathname}})
+      .then(function(r){ if(r.error){ say("lmsg", "Erro no login com Discord: " + r.error.message, "err"); } });
+  });
+  $("go").addEventListener("click", function(){
+    var em = $("em").value.trim(), pw = $("pw").value;
+    if(!em || pw.length < 6){ say("lmsg", "Informe o e-mail e uma senha com pelo menos 6 caracteres.", "err"); return; }
+    $("go").disabled = true; say("lmsg", "Aguarde…");
+    var p = signup
+      ? sb.auth.signUp({email: em, password: pw, options: {data: {full_name: $("nm").value.trim()}, emailRedirectTo: location.origin + location.pathname}})
+      : sb.auth.signInWithPassword({email: em, password: pw});
+    p.then(function(r){
+      $("go").disabled = false;
+      if(r.error){ say("lmsg", "Não foi possível continuar: " + r.error.message, "err"); return; }
+      if(signup && !r.data.session){ say("lmsg", "Conta criada. Confirme o e-mail enviado para você e depois entre.", "ok"); }
+    });
+  });
+
+  // ---- lista de fichas ----
+  function fmtDate(s){
+    try { return new Date(s).toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"}); } catch(e){ return ""; }
+  }
+  function card(f, showOwner){
+    var d = el("div", "item"), n = el("div", "nm", f.nome || "Sem nome");
+    var meta = el("div", "meta", "Editada em " + fmtDate(f.updated_at));
+    var a = el("a", "btn", "Abrir"); a.href = "ficha.html?id=" + encodeURIComponent(f.id);
+    var x = el("button", "dng", "Excluir"); x.type = "button";
+    x.setAttribute("aria-label", "Excluir a ficha " + (f.nome || "sem nome"));
+    x.addEventListener("click", function(){
+      if(!confirm("Excluir a ficha \"" + (f.nome || "Sem nome") + "\"? Isso não pode ser desfeito.")){ return; }
+      sb.from("fichas").delete().eq("id", f.id).then(function(r){
+        if(r.error){ say("amsg", "Erro ao excluir: " + r.error.message, "err"); } else { load(); }
+      });
+    });
+    var box = el("div"); box.style.flex = "1"; box.style.minWidth = "0"; box.appendChild(n); box.appendChild(meta);
+    d.appendChild(box); d.appendChild(a); d.appendChild(x);
+    return d;
+  }
+  var me = null;
+  function load(){
+    sb.from("fichas").select("id,nome,updated_at,owner_id,profiles(display_name)").order("updated_at", {ascending: false}).then(function(r){
+      if(r.error){ say("amsg", "Erro ao carregar as fichas: " + r.error.message, "err"); return; }
+      var mine = $("mine"), all = $("all"); mine.textContent = ""; all.textContent = "";
+      var mineRows = r.data.filter(function(f){ return f.owner_id === me.id; });
+      var others = r.data.filter(function(f){ return f.owner_id !== me.id; });
+      if(!mineRows.length){ mine.appendChild(el("p", "empty", "Você ainda não tem fichas. Clique em “Nova ficha”.")); }
+      mineRows.forEach(function(f){ mine.appendChild(card(f)); });
+      $("all-wrap").hidden = !me.master;
+      if(me.master){
+        if(!others.length){ all.appendChild(el("p", "empty", "Nenhum jogador criou fichas ainda.")); }
+        var groups = {}, order = [];
+        others.forEach(function(f){
+          var k = f.owner_id;
+          if(!groups[k]){ groups[k] = {name: (f.profiles && f.profiles.display_name) || "Jogador", rows: []}; order.push(k); }
+          groups[k].rows.push(f);
+        });
+        order.forEach(function(k){
+          all.appendChild(el("h3", "", groups[k].name)).style.cssText = "margin:16px 0 6px;font-size:1.05rem;color:var(--muted)";
+          var l = el("div", "list"); groups[k].rows.forEach(function(f){ l.appendChild(card(f)); }); all.appendChild(l);
+        });
+      }
+    });
+  }
+  $("new").addEventListener("click", function(){
+    $("new").disabled = true; say("amsg", "Criando ficha…");
+    sb.from("fichas").insert({owner_id: me.id}).select("id").single().then(function(r){
+      $("new").disabled = false;
+      if(r.error){ say("amsg", "Erro ao criar a ficha: " + r.error.message, "err"); return; }
+      location.href = "ficha.html?id=" + encodeURIComponent(r.data.id);
+    });
+  });
+  $("out").addEventListener("click", function(){ sb.auth.signOut(); });
+
+  function render(session){
+    var n = ++rendering;
+    if(!session){ me = null; $("login").hidden = false; $("app").hidden = true; return; }
+    $("login").hidden = true;
+    sb.from("profiles").select("display_name,role").eq("id", session.user.id).maybeSingle().then(function(r){
+      if(n !== rendering){ return; }
+      var p = r.data || {};
+      me = {id: session.user.id, master: p.role === "mestre"};
+      $("uname").textContent = p.display_name || session.user.email || "Jogador";
+      $("ubadge").hidden = !me.master;
+      $("app").hidden = false;
+      load();
+    });
+  }
+  setMode(false);
+  sb.auth.onAuthStateChange(function(ev, session){ setTimeout(function(){ render(session); }, 0); });
+})();
+</script>
+</body>
+</html>

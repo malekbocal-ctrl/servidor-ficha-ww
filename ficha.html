@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ficha – Wanted Warriors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Pirata+One&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9eef0; --panel:#f7f9fa; --ink:#14283b; --muted:#5b6c7b; --line:#b9c6cf;
+  --red:#b5342b; --gold:#a9791c; --sea:#1f6f8b; --fillb:#2f8f5b;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1a26; --panel:#152636; --ink:#e6edf2; --muted:#93a5b4; --line:#2c4256;
+    --red:#e2655b; --gold:#d9a846; --sea:#58b4d1; --fillb:#4cc38a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1a26; --panel:#152636; --ink:#e6edf2; --muted:#93a5b4; --line:#2c4256;
+  --red:#e2655b; --gold:#d9a846; --sea:#58b4d1; --fillb:#4cc38a; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Alegreya Sans",system-ui,sans-serif;font-size:17px;line-height:1.45}
+.sheet{max-width:1240px;margin:0 auto;padding:20px 22px 36px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:start}
+.col{min-width:0}
+.col>:first-child{margin-top:0}
+@media (max-width:860px){.cols{grid-template-columns:1fr;gap:0}.col+.col>:first-child{margin-top:24px}}
+h1,h2{font-family:"Pirata One",Georgia,serif;font-weight:400;margin:0;letter-spacing:.02em}
+h1{font-size:clamp(2.4rem,7vw,3.6rem);line-height:1}
+h2{font-size:1.5rem;color:var(--red);margin:24px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.logo{display:block;width:min(100%,540px);height:auto;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.logo .bg{fill:var(--bg)}
+.logo .bgs{stroke:var(--bg)}
+.tools{display:flex;gap:8px}
+.tools button,.mini{font-family:"Alegreya Sans",system-ui,sans-serif;font-size:.9rem;letter-spacing:normal;background:none;color:var(--muted);border:1px solid var(--line);padding:4px 12px;cursor:pointer}
+.tools button:hover,.tools button:focus-visible,.mini:hover,.mini:focus-visible{color:var(--ink);border-color:var(--ink)}
+header{border:2px solid var(--ink);padding:20px 22px;background:var(--panel);position:relative}
+header::after{content:"";position:absolute;inset:5px;border:1px solid var(--line);pointer-events:none}
+body.awake header{border-color:var(--red)}
+.id{display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:12px;color:var(--muted)}
+.id b{color:var(--ink);font-weight:700}
+.tag{color:var(--red);font-weight:700}
+.hd{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap}
+.hd-txt{flex:1 1 280px;min-width:0}
+.portrait{position:relative;flex:0 0 150px;width:150px;aspect-ratio:3/4;border:1px solid var(--line);background:var(--bg);display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:.9rem;line-height:1.3;cursor:pointer;overflow:hidden;margin-left:auto;z-index:1}
+.portrait:hover,.portrait:focus-within{border-color:var(--ink)}
+.portrait .ph{padding:8px}
+.portrait .ph small{font-size:.8rem}
+.portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.portrait input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;font-size:0}
+.portrait .chg{position:absolute;left:0;right:0;bottom:0;padding:4px;background:rgba(14,26,38,.75);color:#fff;font-size:.85rem;opacity:0;transition:opacity .15s;pointer-events:none}
+.portrait:hover .chg,.portrait:focus-within .chg{opacity:1}
+.portrait .rm{position:absolute;top:5px;right:5px;z-index:2;font:inherit;font-size:.8rem;line-height:1;padding:4px 7px;background:rgba(14,26,38,.75);color:#fff;border:1px solid rgba(255,255,255,.4);cursor:pointer}
+.portrait .rm:hover,.portrait .rm:focus-visible{background:var(--red)}
+@media (max-width:560px){.portrait{margin-left:0}}
+.ed{outline:none;border-bottom:1px dashed transparent;cursor:text}
+.ed:hover{border-bottom-color:var(--line)}
+.ed:focus{border-bottom-color:var(--ink)}
+.ed:empty::before{content:attr(data-ph);color:var(--muted);font-style:italic;font-weight:400}
+.gauges{display:grid;gap:14px;margin-top:18px}
+.gauge{background:var(--panel);border:1px solid var(--line);padding:12px 16px}
+.gauge .top{display:flex;justify-content:space-between;align-items:baseline;margin:0}
+.gauge label{font-family:"Pirata One",Georgia,serif;font-size:1.3rem}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;width:100%;margin:8px 0 2px;height:28px;cursor:pointer;--p:100%;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+input[type=range]::-webkit-slider-runnable-track{height:14px;border-radius:3px;background:linear-gradient(to right,var(--fill) var(--p),var(--line) var(--p))}
+input[type=range]::-moz-range-track{height:14px;border-radius:3px;background:linear-gradient(to right,var(--fill) var(--p),var(--line) var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:6px;height:26px;margin-top:-6px;border-radius:2px;border:none;background:var(--ink)}
+input[type=range]::-moz-range-thumb{width:6px;height:26px;border-radius:2px;border:none;background:var(--ink)}
+#hp{--fill:var(--red)} #est{--fill:var(--fillb)}
+.val{font-size:1.4rem;font-weight:700;display:flex;align-items:baseline;gap:4px}
+.val input{font:inherit;width:5ch;text-align:right;background:transparent;color:var(--ink);border:none;border-bottom:1px solid var(--line);padding:0 2px;border-radius:0;-moz-appearance:textfield;appearance:textfield}
+.val input:last-child{color:var(--muted);font-weight:400;text-align:left}
+.val input:focus-visible{outline:none;border-bottom-color:var(--ink)}
+.val input::-webkit-outer-spin-button,.val input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.stat{position:relative;background:var(--panel);border:1px solid var(--line);padding:10px 12px;text-align:center}
+.stat .v{font-size:1.9rem;font-weight:700;line-height:1.1}
+.stat .n{color:var(--muted);font-size:.95rem}
+.stat .f{color:var(--gold);font-size:.9rem;font-weight:500}
+.v.up{color:var(--red)}
+.stat.has-arrows{padding-top:34px}
+.arrows{position:absolute;right:6px;top:6px;display:flex;flex-direction:row;gap:4px}
+.arrows button{font:inherit;font-size:.6rem;line-height:1;padding:4px 7px;background:none;border:1px solid var(--line);color:var(--muted);cursor:pointer}
+.arrows button:hover,.arrows button:focus-visible{color:var(--ink);border-color:var(--ink)}
+.sw{display:inline-flex;align-items:center;gap:7px;margin-top:6px;font-size:.85rem;color:var(--muted);cursor:pointer;user-select:none}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw .trk{position:relative;width:32px;height:18px;border-radius:9px;background:var(--line);transition:background .15s;flex:none}
+.sw .trk::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--panel);box-shadow:0 0 0 1px var(--muted);transition:transform .15s}
+.sw input:checked+.trk{background:var(--sea)}
+.sw input:checked+.trk::after{transform:translateX(14px)}
+.sw input:focus-visible+.trk{outline:2px solid var(--sea);outline-offset:2px}
+.sw input:checked~.lbl-t{color:var(--ink);font-weight:700}
+@media (prefers-reduced-motion:reduce){.sw .trk,.sw .trk::after{transition:none}}
+.sub{margin:16px 0 8px;color:var(--muted);font-size:.95rem}
+.item{border:1px solid var(--line);background:var(--panel);margin-bottom:8px}
+.item.awake{border-color:var(--red)}
+.item .head{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 14px}
+.nm{flex:1;min-width:0;font-weight:700;padding:5px 0}
+.cost{font-weight:500;color:var(--sea);min-width:3ch;text-align:right;padding:2px 4px;max-width:12em}
+.item.awake .cost{color:var(--red)}
+.use{font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--sea);background:none;color:var(--sea);padding:4px 14px;min-width:96px;white-space:nowrap}
+.use:hover:not(:disabled){background:var(--sea);color:var(--panel)}
+.use:disabled{opacity:.4;cursor:not-allowed}
+.item.awake .use{border-color:var(--red);color:var(--red)}
+.item.awake .use:hover:not(:disabled),.item.awake .use.on{background:var(--red);color:var(--panel)}
+.ico{font:inherit;background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 7px;line-height:1}
+.ico:hover,.ico:focus-visible{color:var(--red)}
+.exp{display:none}
+@media (hover:none){.exp{display:inline-block}}
+.use:focus-visible,.ico:focus-visible{outline:2px solid var(--sea);outline-offset:-2px}
+.desc{display:grid;grid-template-rows:0fr;transition:grid-template-rows .22s ease}
+.desc>div{overflow:hidden}
+.desc p{margin:0;padding:10px 16px 14px;border-top:1px dashed var(--line);outline:none;min-height:2.6em}
+.desc p:empty::before{content:attr(data-ph);color:var(--muted);font-style:italic}
+.item:has(:focus-visible) .desc,.item.open .desc{grid-template-rows:1fr}
+@media (hover:hover){.item:hover .desc{grid-template-rows:1fr}}
+@media (prefers-reduced-motion:reduce){.desc{transition:none}}
+.atk .head{flex-wrap:wrap}
+.atk .tp{font:inherit;font-weight:700;background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:3px 4px;cursor:pointer}
+.atk .dm{font-weight:500;color:var(--gold);min-width:5ch;padding:2px 4px}
+.ico-svg{width:1.1em;height:1.1em;vertical-align:-.2em;margin-right:5px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.roll{font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--red);background:none;color:var(--red);padding:4px 12px;white-space:nowrap}
+.roll:hover,.roll:focus-visible{background:var(--red);color:var(--panel)}
+.roll.dmg{border-color:var(--gold);color:var(--gold)}
+.roll.dmg:hover,.roll.dmg:focus-visible{background:var(--gold);color:var(--panel)}
+.dm{cursor:default}
+.dcp{display:flex;flex-direction:column;gap:16px;margin:0 0 14px;padding:10px 12px;border:1px solid var(--line);background:var(--panel)}
+.dcg{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.dcg .tt{flex:1 0 100%;font-weight:700;font-size:.95rem}
+.dcp input{flex:1 1 280px;min-width:0;font:inherit;font-size:.95rem;padding:5px 8px;color:var(--ink);background:var(--bg);border:1px solid var(--line)}
+.dcp input:focus-visible{outline:2px solid var(--sea);outline-offset:-1px}
+.dcp .st{flex:1 0 100%;font-size:.9rem;color:var(--muted)}
+.dcp .st.ok{color:var(--fillb)} .dcp .st.err{color:var(--red)}
+.tools button.on{color:var(--fillb);border-color:var(--fillb)}
+.res .dc{display:block;margin-top:2px;font-size:.85rem;font-weight:400;color:var(--muted)}
+.res .ex{display:block;margin-top:4px;font-weight:700}
+.res{padding:6px 14px 8px;border-top:1px dashed var(--line);font-weight:500;color:var(--muted)}
+.res b{color:var(--ink);font-size:1.15rem}
+.res .crit{color:var(--fillb)} .res .fail{color:var(--red)}
+@media print{
+  body{background:#fff;color:#000}
+  .tools,.use,.mini,.arrows,.ico,.roll,.res,.dcp,.portrait .rm,.portrait .chg,.portrait input{display:none}
+  .portrait:not(.has) {display:none}
+  .ed:empty::before,.desc p:empty::before{content:""}
+  .desc{grid-template-rows:1fr}
+  .item{break-inside:avoid}
+}
+a.mini{text-decoration:none;display:inline-block}
+.cst{font-size:.85rem;color:var(--muted)} .cst.ok{color:var(--fillb)} .cst.err{color:var(--red)}
+.sheet.loading{visibility:hidden}
+#boot-msg{max-width:640px;margin:60px auto;padding:20px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="boot-msg" role="status">Carregando ficha…</div>
+<main class="sheet loading" id="sheet-main">
+  <div class="top">
+    <svg class="logo" viewBox="0 0 1500 330" role="img" aria-label="Wanted Warriors">
+      <g stroke="currentColor" stroke-linecap="round" fill="none">
+        <path d="M150 45H1440" stroke-width="14"/><path d="M150 278H1440" stroke-width="14"/>
+        <path d="M28 68L162 252" stroke-width="12"/><path d="M162 68L28 252" stroke-width="12"/>
+      </g>
+      <g fill="currentColor"><circle cx="28" cy="68" r="11"/><circle cx="162" cy="68" r="11"/><circle cx="28" cy="252" r="11"/><circle cx="162" cy="252" r="11"/></g>
+      <circle class="bg" cx="95" cy="160" r="62" stroke="currentColor" stroke-width="16"/>
+      <path fill="currentColor" d="M95 114L107 148L141 160L107 172L95 206L83 172L49 160L83 148Z"/>
+      <g id="logo-letters" fill="currentColor" font-family="'Abril Fatface','Playfair Display',Georgia,serif" font-size="190"></g>
+      <g fill="none" stroke-linecap="round">
+        <path id="rope" d="M90 245C180 300 260 330 340 296S470 262 560 300S700 328 790 296S920 266 1010 300S1160 330 1250 290S1340 215 1372 168" stroke="currentColor" stroke-width="26"/>
+        <path class="bgs" d="M90 245C180 300 260 330 340 296S470 262 560 300S700 328 790 296S920 266 1010 300S1160 330 1250 290S1340 215 1372 168" stroke-width="19"/>
+        <path d="M90 245C180 300 260 330 340 296S470 262 560 300S700 328 790 296S920 266 1010 300S1160 330 1250 290S1340 215 1372 168" stroke="currentColor" stroke-width="19" stroke-linecap="butt" stroke-dasharray="2.5 9"/>
+      </g>
+    </svg>
+    <div class="tools">
+      <a id="back" class="mini" href="index.html">← Fichas</a>
+      <span id="cloud-st" class="cst" role="status" aria-live="polite"></span>
+      <button id="dc-btn" type="button" aria-expanded="false" aria-controls="dc-panel">Discord</button>
+      <button id="reset" type="button">Restaurar valores</button>
+      <button id="print" type="button">Salvar como PDF</button>
+    </div>
+  </div>
+
+  <div id="dc-panel" class="dcp" hidden>
+    <div class="dcg">
+      <div class="tt">Rolagens (ataque e dano)</div>
+      <input id="dc-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="URL do webhook do Discord (https://discord.com/api/webhooks/...)" aria-label="URL do webhook das rolagens">
+      <button id="dc-save" class="mini" type="button">Salvar</button>
+      <button id="dc-test" class="mini" type="button">Testar</button>
+      <button id="dc-clear" class="mini" type="button">Remover</button>
+      <div id="dc-st" class="st" role="status" aria-live="polite"></div>
+    </div>
+    <div class="dcg">
+      <div class="tt">Status em tempo real (Vida, Estamina e Despertado), em um canal separado</div>
+      <input id="st-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="URL do webhook do canal de status" aria-label="URL do webhook do status">
+      <button id="st-save" class="mini" type="button">Salvar</button>
+      <button id="st-clear" class="mini" type="button">Remover</button>
+      <div id="st-st" class="st" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div class="cols">
+  <div class="col">
+    <header>
+    <div class="hd"><div class="hd-txt">
+      <h1 class="ed-id" data-k="nome" data-ph="Nome"></h1>
+      <div class="id">
+        <span>Função de bordo: <b class="ed-id" data-k="funcao" data-ph="função"></b></span>
+        <span>Doutrina: <b class="ed-id" data-k="doutrina" data-ph="doutrina"></b></span>
+        <span>Classe: <b class="ed-id" data-k="classe" data-ph="classe"></b></span>
+        <span>Deslocamento: <b id="desl">5</b></span>
+        <span id="awake-tag" class="tag" hidden>Despertado</span>
+      </div>
+    </div>
+    <label class="portrait" id="portrait" title="Clique para enviar uma imagem">
+      <span class="ph" id="pt-ph">Aparência do personagem<br><small>clique para enviar uma imagem</small></span>
+      <img id="pt-img" alt="Aparência do personagem" hidden>
+      <span class="chg" id="pt-chg" hidden>Trocar imagem</span>
+      <input id="pt-file" type="file" accept="image/*" aria-label="Enviar imagem da aparência do personagem">
+      <button id="pt-rm" class="rm" type="button" aria-label="Remover imagem" hidden>✕</button>
+    </label>
+    </div>
+    </header>
+
+    <div class="gauges">
+      <div class="gauge">
+        <div class="top"><label for="hp">Vida (H.P)</label><span class="val"><input id="hpc" type="number" inputmode="numeric" min="0" aria-label="Vida atual"> / <input id="hpm" type="number" inputmode="numeric" min="0" aria-label="Vida máxima"></span></div>
+        <input id="hp" type="range" min="0" max="0" step="1" value="0">
+      </div>
+      <div class="gauge">
+        <div class="top"><label for="est">Energia (Estamina)</label><span class="val"><input id="estc" type="number" inputmode="numeric" min="0" aria-label="Estamina atual"> / <input id="estm" type="number" inputmode="numeric" min="0" aria-label="Estamina máxima"></span></div>
+        <input id="est" type="range" min="0" max="0" step="1" value="0">
+      </div>
+    </div>
+
+    <h2>Atributos</h2>
+    <div class="row">
+      <div class="stat"><div class="v">0</div><div class="n">Força</div></div>
+      <div class="stat"><div class="v">0</div><div class="n">Destreza</div></div>
+      <div class="stat"><div class="v">0</div><div class="n">Agilidade</div></div>
+      <div class="stat"><div class="v">0</div><div class="n">Energia</div></div>
+      <div class="stat"><div class="v">0</div><div class="n">Vigor</div></div>
+      <div class="stat"><div class="v">0</div><div class="n">Inteligência</div></div>
+    </div>
+
+    <h2>Dados de combate</h2>
+    <div class="row">
+      <div class="stat"><div class="v">5</div><div class="n">Combate Corporal (CC)</div><div class="f">5 + 0</div></div>
+      <div class="stat"><div class="v">5</div><div class="n">Combate a Distância (CD)</div><div class="f">5 + 0</div></div>
+      <div class="stat"><div class="v">5</div><div class="n">Esquiva (ESQV)</div><div class="f">5 + 0</div></div>
+    </div>
+    <p class="sub">Akumados ou armas akumadas</p>
+    <div class="row">
+      <div class="stat"><div class="v">4</div><div class="n">Freestyle</div><div class="f">4 + 0</div></div>
+      <div class="stat"><div class="v">2</div><div class="n">Técnica</div><div class="f">2 + 0</div></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2 class="hrow"><span>Ataques</span><span class="btns"><button class="mini" type="button" data-add="ataques">+ Ataque</button></span></h2>
+    <div id="ataques"></div>
+
+    <h2 class="hrow"><span>Técnicas</span><span class="btns"><button class="mini" type="button" data-add="tecnicas">+ Técnica</button></span></h2>
+    <div id="tecnicas"></div>
+
+    <h2 class="hrow"><span>Despertar</span><span class="btns"><button class="mini" type="button" data-add="despertar" id="add-despertar">+ Despertar</button></span></h2>
+    <div id="despertar"></div>
+
+    <h2 class="hrow"><span>Habilidades ativas de classe</span><span class="btns"><button id="reset-uses" class="mini" type="button">Restaurar usos</button><button class="mini" type="button" data-add="ativas">+ Habilidade ativa</button></span></h2>
+    <div id="ativas"></div>
+
+    <h2 class="hrow"><span>Habilidades passivas de classe</span><span class="btns"><button class="mini" type="button" data-add="passivas">+ Habilidade passiva</button></span></h2>
+    <div id="passivas"></div>
+  </div>
+  </div>
+</main>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  var msg = document.getElementById("boot-msg"), main = document.getElementById("sheet-main");
+  function fail(t){ msg.textContent = t; msg.hidden = false; }
+  if(window.WW_MISSING){ fail("Configure o arquivo config.js com os dados do seu projeto Supabase (veja o LEIAME)."); return; }
+  var sb = window.sb, id = new URLSearchParams(location.search).get("id");
+  if(!id){ location.replace("index.html"); return; }
+  sb.auth.getSession().then(function(r){
+    if(!r.data.session){ location.replace("index.html"); return null; }
+    return sb.from("fichas").select("id,data,portrait,nome").eq("id", id).maybeSingle();
+  }).then(function(r){
+    if(!r){ return; }
+    if(r.error){ fail("Não foi possível carregar a ficha: " + r.error.message); return; }
+    if(!r.data){ fail("Ficha não encontrada ou sem permissão de acesso."); return; }
+    var st = document.getElementById("cloud-st"), timer = null, pending = null, lastErr = false;
+    function say(t, c){ st.textContent = t; st.className = "cst" + (c ? " " + c : ""); }
+    function flush(){
+      clearTimeout(timer); timer = null;
+      if(!pending){ return Promise.resolve(); }
+      var obj = pending; pending = null;
+      var nome = ((obj.S && obj.S.ident && obj.S.ident.nome) || "").trim();
+      return sb.from("fichas").update({data: obj, nome: nome}).eq("id", id).then(function(x){
+        if(x.error){ say("Erro ao salvar: " + x.error.message, "err"); pending = pending || obj; }
+        else if(!pending){ say("Salvo na nuvem ✓", "ok"); }
+      });
+    }
+    window.CLOUD = {
+      data: r.data.data, portrait: r.data.portrait || "", armed: false,
+      save: function(obj){
+        if(!this.armed){ return; }
+        pending = obj; say("Salvando…");
+        clearTimeout(timer); timer = setTimeout(flush, 800);
+      },
+      savePortrait: function(p){
+        say("Salvando imagem…");
+        return sb.from("fichas").update({portrait: p || null}).eq("id", id).then(function(x){
+          if(x.error){ say("Erro ao salvar a imagem: " + x.error.message, "err"); }
+          else { say("Salvo na nuvem ✓", "ok"); }
+        });
+      }
+    };
+    document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden"){ flush(); } });
+    window.addEventListener("pagehide", function(){ flush(); });
+    var s = document.createElement("script");
+    s.src = "sheet.js";
+    s.onload = function(){ window.CLOUD.armed = true; msg.hidden = true; main.classList.remove("loading"); say("Salvo na nuvem ✓", "ok"); };
+    s.onerror = function(){ fail("Não foi possível carregar o arquivo sheet.js."); };
+    document.body.appendChild(s);
+  }).catch(function(e){ fail("Erro inesperado: " + (e && e.message || e)); });
+})();
+</script>
+</body>
+</html>
