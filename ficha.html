@@ -42,6 +42,14 @@ h2{font-size:1.5rem;color:var(--red);margin:24px 0 10px;padding-bottom:6px;borde
 .logo .bg{fill:var(--bg)}
 .logo .bgs{stroke:var(--bg)}
 .tools{display:flex;gap:8px}
+.topbar{display:grid;grid-template-columns:1fr minmax(0,540px) 1fr;align-items:center;gap:12px;margin-bottom:14px}
+.topbar .logo{width:100%}
+.tools.tl{flex-direction:column;align-items:flex-start;justify-self:start}
+.tools.tr{flex-direction:column;align-items:flex-end;justify-self:end}
+@media (max-width:640px){
+  .topbar{grid-template-columns:1fr 1fr}
+  .topbar .logo{grid-column:1/-1;grid-row:2;max-width:540px;margin:0 auto}
+}
 .tools button,.mini{font-family:"Alegreya Sans",system-ui,sans-serif;font-size:.9rem;letter-spacing:normal;background:none;color:var(--muted);border:1px solid var(--line);padding:4px 12px;cursor:pointer}
 .tools button:hover,.tools button:focus-visible,.mini:hover,.mini:focus-visible{color:var(--ink);border-color:var(--ink)}
 header{border:2px solid var(--ink);padding:20px 22px;background:var(--panel);position:relative}
@@ -248,7 +256,11 @@ body:not(.play) .item.awake .use{display:none}
 <body>
 <div id="boot-msg" role="status">Carregando ficha…</div>
 <main class="sheet loading" id="sheet-main">
-  <div class="top">
+  <div class="topbar">
+    <div class="tools tl">
+      <a id="back" class="mini" href="index.html">← Fichas</a>
+      <span id="cloud-st" class="cst" role="status" aria-live="polite"></span>
+    </div>
     <svg class="logo" viewBox="0 0 1500 330" role="img" aria-label="Wanted Warriors">
       <g stroke="currentColor" stroke-linecap="round" fill="none">
         <path d="M150 45H1440" stroke-width="14"/><path d="M150 278H1440" stroke-width="14"/>
@@ -264,9 +276,7 @@ body:not(.play) .item.awake .use{display:none}
         <path d="M90 245C180 300 260 330 340 296S470 262 560 300S700 328 790 296S920 266 1010 300S1160 330 1250 290S1340 215 1372 168" stroke="currentColor" stroke-width="19" stroke-linecap="butt" stroke-dasharray="2.5 9"/>
       </g>
     </svg>
-    <div class="tools">
-      <a id="back" class="mini" href="index.html">← Fichas</a>
-      <span id="cloud-st" class="cst" role="status" aria-live="polite"></span>
+    <div class="tools tr">
       <button id="play-btn" type="button" aria-pressed="false">Modo sessão</button>
       <button id="dc-btn" type="button" aria-expanded="false" aria-controls="dc-panel">Discord</button>
     </div>
