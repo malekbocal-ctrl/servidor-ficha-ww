@@ -35,7 +35,7 @@ var CLASSES = [
   ]},
   {n:"Infantaria", tag:"Doutrinas armadas e Criação grátis", free:{"Criação":2}, items:[
     ["passivas","Doutrina armada vantajosa","","Vantagem em testes utilizando qualquer doutrina armada."],
-    ["passivas","Doutrina Polivalente","","Aptidão gratuita: Doutrina Polivalente."],
+    ["passivas","Doutrina Polivalente","","Escolha 1 doutrina grátis entre Espadachim, Boxe, Atirador ou Black Leg (seletor no quadro da classe Infantaria)."],
     ["ativas","Golpe de doutrina","3x por combate","Sangramento, queimação e atordoamento sempre garantidos em qualquer ataque utilizando sua doutrina."]
   ]},
   {n:"Maestro", tag:"Apoio à tripulação e controle de turnos", free:{}, items:[
@@ -59,12 +59,15 @@ var APTS = [
   {n:"Despertar", cost:8, d:"Pode ser comprada quantas vezes quiser. Permite criar as transformações (de akuma e de doutrina)."},
   {n:"Duro de Matar", cost:4, d:"Ao tomar um dano massivo, o personagem pode gastar esta aptidão uma vez por sessão para sobreviver com 1 de vida."}
 ];
+var POLY = ["Espadachim", "Boxe", "Atirador", "Black Leg"];
 var ptsReg = {cls:[], apt:[]}, toastT = null, clsPick = false;
 function $id(i){ return document.getElementById(i); }
 function classObj(n){ return CLASSES.filter(function(c){ return c.n === n; })[0] || null; }
 function freeApt(n, list){
   var t = 0;
-  (list || S.classes).forEach(function(c){ var o = classObj(c); if(o && o.free[n]){ t += o.free[n]; } });
+  var l = list || S.classes;
+  l.forEach(function(c){ var o = classObj(c); if(o && o.free[n]){ t += o.free[n]; } });
+  if(S.poly === n && l.indexOf("Infantaria") > -1){ t += 1; }
   return t;
 }
 function aptUnit(a, list){
@@ -112,7 +115,7 @@ function toggleClass(c){
       toast("Não é possível remover " + c.n + ": sem os descontos dela suas compras passariam de " + POINTS + " pontos. Remova alguma compra antes.");
       return;
     }
-    S.classes = next; removeClassItems(c.n); clsPick = false;
+    S.classes = next; removeClassItems(c.n); clsPick = false; if(c.n === "Infantaria"){ S.poly = ""; }
   } else {
     if(S.classes.length >= MAX_CLASSES){ toast("Cada personagem pode ter no máximo " + MAX_CLASSES + " classes."); return; }
     if(!canSpend(CLASS_COST)){ return; }
@@ -164,7 +167,22 @@ function buildPoints(){
     var rm = el("button", "ico"); rm.type = "button"; rm.textContent = "✕"; rm.setAttribute("aria-label", "Remover a classe " + c.n);
     rm.addEventListener("click", function(){ toggleClass(c); });
     h.appendChild(nm); h.appendChild(cs); h.appendChild(mkExpand(d)); h.appendChild(rm);
-    d.appendChild(h); d.appendChild(mkDesc(classText(c))); d.hidden = true;
+    d.appendChild(h);
+    if(c.n === "Infantaria"){
+      var ex = el("div", "cls-extra"), lb = el("label"), sl = el("select");
+      sl.id = "poly-sel"; lb.setAttribute("for", "poly-sel"); lb.textContent = "Doutrina Polivalente (grátis):";
+      [""].concat(POLY).forEach(function(p){ var o = el("option"); o.value = p; o.textContent = p || "Escolher…"; sl.appendChild(o); });
+      sl.addEventListener("change", function(){
+        var v = sl.value, a = APTS.filter(function(x){ return x.n === v; })[0];
+        if(a && a.max && (S.apt[a.n] || 0) + freeApt(a.n) + 1 > a.max){
+          toast("Você já está no limite de " + a.max + " compras de " + a.n + ". Escolha outra doutrina ou remova uma compra.");
+          sl.value = S.poly || ""; return;
+        }
+        S.poly = v; show();
+      });
+      ex.appendChild(lb); ex.appendChild(sl); d.appendChild(ex); ptsReg.poly = sl;
+    }
+    d.appendChild(mkDesc(classText(c))); d.hidden = true;
     chosen.appendChild(d);
     ptsReg.cls.push({c:c, tile:tile, card:d});
   });
@@ -196,6 +214,7 @@ function updPoints(){
   if(w.textContent !== wt){ w.textContent = wt; }
   w.hidden = !wt;
   var nc = S.classes.length;
+  if(ptsReg.poly){ ptsReg.poly.value = S.poly || ""; }
   ptsReg.cls.forEach(function(r){
     var on = S.classes.indexOf(r.c.n) > -1;
     r.card.hidden = !on; r.tile.hidden = on;
@@ -821,6 +840,7 @@ try {
 
 S.classes = Array.isArray(S.classes) ? S.classes.filter(function(c, i, a){ return classObj(c) && a.indexOf(c) === i; }).slice(0, MAX_CLASSES) : [];
 if(!S.apt || typeof S.apt !== "object" || Array.isArray(S.apt)){ S.apt = {}; }
+if(POLY.indexOf(S.poly) < 0 || S.classes.indexOf("Infantaria") < 0){ S.poly = ""; }
 APTS.forEach(function(a){ var v = parseInt(S.apt[a.n], 10); S.apt[a.n] = isNaN(v) || v < 0 ? 0 : v; });
 
 document.querySelectorAll(".ed-id").forEach(function(e){
