@@ -147,6 +147,15 @@ function classText(c){
   return L.join("\n");
 }
 function buildPoints(){
+  $id("dm-use").addEventListener("click", useDM);
+  $id("dm-reset").addEventListener("click", function(){
+    if(!(S.dmUsed > 0)){ toast("Os usos de Duro de Matar já estão completos."); return; }
+    if(!confirm("Novo arco: restaurar os usos de Duro de Matar?")){ return; }
+    S.dmUsed = 0; show();
+  });
+  $id("play-btn").addEventListener("click", function(){ setPlay(!document.body.classList.contains("play")); });
+  var wasPlay = false; try { wasPlay = localStorage.getItem("ww-play") === "1"; } catch(e){}
+  setPlay(wasPlay);
   var cr = $id("classes"), ar = $id("aptidoes");
   if(!cr || !ar){ return; }
   var chosen = el("div", "cls-chosen"), pick = el("div", "cls-grid"), add = el("button", "mini cls-add");
@@ -202,6 +211,28 @@ function buildPoints(){
     ar.appendChild(d); ptsReg.apt.push({a:a, d:d, fr:fr, cs:cs, mn:mn, ct:ct, pl:pl});
   });
 }
+function dmOwned(){ return (S.apt["Duro de Matar"] || 0) + freeApt("Duro de Matar"); }
+function updDM(){
+  var box = $id("dm"); if(!box){ return; }
+  var n = dmOwned(); box.hidden = n <= 0; if(n <= 0){ return; }
+  var rem = Math.max(0, n - (S.dmUsed || 0)), zero = +hp.value <= 0;
+  $id("dm-n").textContent = rem + "/" + n;
+  $id("dm-use").disabled = rem <= 0 || !zero;
+  box.classList.toggle("alert", zero && rem > 0);
+  var h = rem <= 0 ? "Sem usos restantes." : zero ? "Vida zerada: use agora para sobreviver com 1 de vida." : "Fica disponível quando a vida chegar a 0.";
+  var hn = $id("dm-hint"); if(hn.textContent !== h){ hn.textContent = h; }
+}
+function useDM(){
+  if(dmOwned() - (S.dmUsed || 0) <= 0 || +hp.value > 0){ return; }
+  S.dmUsed = (S.dmUsed || 0) + 1;
+  hp.max = Math.max(1, +hp.max); hp.value = 1; show();
+}
+function setPlay(on){
+  document.body.classList.toggle("play", on);
+  var b = $id("play-btn");
+  b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Modo edição" : "Modo sessão";
+  try { localStorage.setItem("ww-play", on ? "1" : "0"); } catch(e){}
+}
 function updPoints(){
   var lf = $id("pts-left"); if(!lf){ return; }
   var p = spentParts(S.classes), left = POINTS - p.total;
@@ -209,8 +240,8 @@ function updPoints(){
   $id("pts").classList.toggle("full", left <= 0);
   $id("pts-det").textContent = "Gastos " + p.total + " de " + POINTS + " · Atributos " + p.at + " · Classes " + p.cl + " · Aptidões " + p.ap;
   var w = $id("pts-warn"), wt = "";
-  if(left < 0){ wt = "Você está " + (-left) + " ponto" + (left === -1 ? "" : "s") + " acima do limite de " + POINTS + ". Compras bloqueadas até reduzir os gastos."; }
-  else if(left === 0){ wt = "Limite de " + POINTS + " pontos atingido. Compras bloqueadas."; }
+  if(left < 0){ wt = (-left) + " ponto" + (left === -1 ? "" : "s") + " acima do limite: compras bloqueadas."; }
+  else if(left === 0){ wt = "Limite atingido: compras bloqueadas."; }
   if(w.textContent !== wt){ w.textContent = wt; }
   w.hidden = !wt;
   var nc = S.classes.length;
@@ -389,7 +420,7 @@ function addSwitches(){
 }
 
 function refreshUI(){
-  renderStats(); updPoints();
+  renderStats(); updPoints(); updDM();
   document.body.classList.toggle("awake", awakened);
   document.getElementById("awake-tag").hidden = !awakened;
   document.getElementById("add-despertar").hidden = S.despertar.length > 0;
@@ -462,7 +493,7 @@ function mkItem(sec, it){
   });
   var ex = el("button", "ico exp"); ex.type = "button"; ex.textContent = "▾"; ex.setAttribute("aria-label", "Mostrar descrição");
   ex.addEventListener("click", function(){ d.classList.toggle("open"); });
-  var dl = el("button", "ico"); dl.type = "button"; dl.textContent = "✕"; dl.setAttribute("aria-label", "Excluir " + it.n);
+  var dl = el("button", "ico del"); dl.type = "button"; dl.textContent = "✕"; dl.setAttribute("aria-label", "Excluir " + it.n);
   dl.addEventListener("click", function(){
     S[sec] = S[sec].filter(function(x){ return x !== it; });
     delete uses[it.id];
@@ -654,7 +685,7 @@ function mkAttack(it){
   });
   var ex = el("button", "ico exp"); ex.type = "button"; ex.textContent = "▾"; ex.setAttribute("aria-label", "Mostrar descrição");
   ex.addEventListener("click", function(){ d.classList.toggle("open"); });
-  var dl = el("button", "ico"); dl.type = "button"; dl.textContent = "✕"; dl.setAttribute("aria-label", "Excluir " + it.n);
+  var dl = el("button", "ico del"); dl.type = "button"; dl.textContent = "✕"; dl.setAttribute("aria-label", "Excluir " + it.n);
   dl.addEventListener("click", function(){
     S.ataques = S.ataques.filter(function(x){ return x !== it; });
     renderAll(); show();
@@ -714,7 +745,7 @@ function resetUses(secs){
 }
 document.getElementById("reset-uses").addEventListener("click", function(){ resetUses(["ativas"]); show(); });
 document.getElementById("reset").addEventListener("click", function(){
-  hp.value = hp.max; est.value = est.max; awakened = false; resetUses(SECS); show();
+  hp.value = hp.max; est.value = est.max; awakened = false; S.dmUsed = 0; resetUses(SECS); show();
 });
 (function(){
   var btn = document.getElementById("dc-btn"), pn = document.getElementById("dc-panel"),
@@ -841,6 +872,7 @@ try {
 S.classes = Array.isArray(S.classes) ? S.classes.filter(function(c, i, a){ return classObj(c) && a.indexOf(c) === i; }).slice(0, MAX_CLASSES) : [];
 if(!S.apt || typeof S.apt !== "object" || Array.isArray(S.apt)){ S.apt = {}; }
 if(POLY.indexOf(S.poly) < 0 || S.classes.indexOf("Infantaria") < 0){ S.poly = ""; }
+S.dmUsed = Math.max(0, parseInt(S.dmUsed, 10) || 0);
 APTS.forEach(function(a){ var v = parseInt(S.apt[a.n], 10); S.apt[a.n] = isNaN(v) || v < 0 ? 0 : v; });
 
 document.querySelectorAll(".ed-id").forEach(function(e){

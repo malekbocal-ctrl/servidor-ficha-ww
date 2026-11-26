@@ -55,6 +55,12 @@ button:disabled{opacity:.5;cursor:default}
 .item .meta{color:var(--muted);font-size:.85rem}
 h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;color:var(--red);margin:26px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--line)}
 .empty{color:var(--muted)}
+.stats{display:flex;gap:18px;flex-wrap:wrap;margin:3px 0 2px}
+.stat{position:relative;padding-bottom:5px;font-size:.92rem;font-weight:700;white-space:nowrap}
+.stat::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(to right,var(--c) var(--p,0%),var(--line) var(--p,0%))}
+.stat.hp{--c:var(--red)} .stat.en{--c:var(--sea)}
+.stat.low{color:var(--red)}
+.stat small{font-weight:400;color:var(--muted);margin-right:4px}
 .tabs{display:flex;gap:8px;margin-bottom:6px}
 </style>
 </head>
@@ -156,6 +162,49 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
   function fmtDate(s){
     try { return new Date(s).toLocaleString("pt-BR", {dateStyle: "short", timeStyle: "short"}); } catch(e){ return ""; }
   }
+  var live = {}, rt = null, pollT = null, refT = null;
+  var LIVE_COLS = "id,nome,updated_at,hp:data->>hp,hpm:data->>hpm,est:data->>est,estm:data->>estm";
+  function num(v){ var n = parseInt(v, 10); return isNaN(n) ? null : n; }
+  function setGauge(e, label, cur, max){
+    cur = num(cur); max = num(max);
+    e.textContent = "";
+    var sm = el("small", "", label); e.appendChild(sm);
+    e.appendChild(document.createTextNode(cur === null ? "—" : cur + (max ? "/" + max : "")));
+    var pct = (cur !== null && max) ? Math.max(0, Math.min(100, 100 * cur / max)) : 0;
+    e.style.setProperty("--p", pct + "%");
+    e.classList.toggle("low", cur !== null && !!max && cur / max <= 0.25);
+  }
+  function setStats(f){
+    var r = live[f.id]; if(!r){ return; }
+    setGauge(r.hp, "Vida", f.hp, f.hpm);
+    setGauge(r.en, "Energia", f.est, f.estm);
+  }
+  function refreshStats(){
+    if(!me || !me.master){ return; }
+    sb.from("fichas").select(LIVE_COLS).then(function(r){
+      if(r.error || !r.data){ return; }
+      r.data.forEach(function(f){
+        var e = live[f.id]; if(!e){ return; }
+        setStats(f);
+        e.meta.textContent = "Editada em " + fmtDate(f.updated_at);
+        e.nm.textContent = f.nome || "Sem nome";
+      });
+    });
+  }
+  function stopLive(){
+    if(rt){ sb.removeChannel(rt); rt = null; }
+    clearInterval(pollT); pollT = null; clearTimeout(refT);
+  }
+  function startLive(){
+    stopLive();
+    if(!me || !me.master){ return; }
+    rt = sb.channel("fichas-live").on("postgres_changes", {event: "*", schema: "public", table: "fichas"}, function(p){
+      if(p.eventType === "UPDATE"){ clearTimeout(refT); refT = setTimeout(refreshStats, 300); }
+      else { clearTimeout(refT); refT = setTimeout(load, 300); }
+    }).subscribe();
+    // reforço: atualiza a cada 10 s caso o Realtime não esteja habilitado na tabela
+    pollT = setInterval(function(){ if(document.visibilityState === "visible"){ refreshStats(); } }, 10000);
+  }
   function card(f, showOwner){
     var d = el("div", "item"), n = el("div", "nm", f.nome || "Sem nome");
     var meta = el("div", "meta", "Editada em " + fmtDate(f.updated_at));
@@ -168,15 +217,22 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
         if(r.error){ say("amsg", "Erro ao excluir: " + r.error.message, "err"); } else { load(); }
       });
     });
-    var box = el("div"); box.style.flex = "1"; box.style.minWidth = "0"; box.appendChild(n); box.appendChild(meta);
+    var box = el("div"); box.style.flex = "1"; box.style.minWidth = "0"; box.appendChild(n);
+    if(showOwner){
+      var st = el("div", "stats"), hpE = el("span", "stat hp"), enE = el("span", "stat en");
+      st.appendChild(hpE); st.appendChild(enE); box.appendChild(st);
+      live[f.id] = {hp: hpE, en: enE, meta: meta, nm: n};
+      setStats(f);
+    }
+    box.appendChild(meta);
     d.appendChild(box); d.appendChild(a); d.appendChild(x);
     return d;
   }
   var me = null;
   function load(){
-    sb.from("fichas").select("id,nome,updated_at,owner_id,profiles(display_name)").order("updated_at", {ascending: false}).then(function(r){
+    sb.from("fichas").select(LIVE_COLS + ",owner_id,profiles(display_name)").order("updated_at", {ascending: false}).then(function(r){
       if(r.error){ say("amsg", "Erro ao carregar as fichas: " + r.error.message, "err"); return; }
-      var mine = $("mine"), all = $("all"); mine.textContent = ""; all.textContent = "";
+      var mine = $("mine"), all = $("all"); mine.textContent = ""; all.textContent = ""; live = {};
       var mineRows = r.data.filter(function(f){ return f.owner_id === me.id; });
       var others = r.data.filter(function(f){ return f.owner_id !== me.id; });
       if(!mineRows.length){ mine.appendChild(el("p", "empty", "Você ainda não tem fichas. Clique em “Nova ficha”.")); }
@@ -192,7 +248,7 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
         });
         order.forEach(function(k){
           all.appendChild(el("h3", "", groups[k].name)).style.cssText = "margin:16px 0 6px;font-size:1.05rem;color:var(--muted)";
-          var l = el("div", "list"); groups[k].rows.forEach(function(f){ l.appendChild(card(f)); }); all.appendChild(l);
+          var l = el("div", "list"); groups[k].rows.forEach(function(f){ l.appendChild(card(f, true)); }); all.appendChild(l);
         });
       }
     });
@@ -209,7 +265,7 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
 
   function render(session){
     var n = ++rendering;
-    if(!session){ me = null; $("login").hidden = false; $("app").hidden = true; return; }
+    if(!session){ stopLive(); me = null; $("login").hidden = false; $("app").hidden = true; return; }
     $("login").hidden = true;
     sb.from("profiles").select("display_name,role").eq("id", session.user.id).maybeSingle().then(function(r){
       if(n !== rendering){ return; }
@@ -218,7 +274,7 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
       $("uname").textContent = p.display_name || session.user.email || "Jogador";
       $("ubadge").hidden = !me.master;
       $("app").hidden = false;
-      load();
+      load(); startLive();
     });
   }
   setMode(false);

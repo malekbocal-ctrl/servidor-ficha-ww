@@ -194,6 +194,22 @@ a.mini{text-decoration:none;display:inline-block}
 .cls-extra select{font:inherit;font-weight:400;padding:3px 8px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px}
 @media (prefers-reduced-motion:reduce){.cls-tile{transition:none}.cls-tile:hover{transform:none}}
 @media print{.cls-grid,.cls-add{display:none}}
+.dm{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:14px 0 4px;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.dm-info{display:flex;flex-direction:column;flex:1 1 180px;min-width:0}
+.dm-info b{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.25rem}
+.dm-info b span{font-family:"Alegreya Sans",system-ui,sans-serif;font-weight:700;font-size:1rem;color:var(--sea);margin-left:6px}
+.dm-info small{color:var(--muted);font-size:.88rem}
+.dm-btn{font:inherit;font-weight:700;cursor:pointer;padding:9px 18px;border-radius:999px;border:2px solid var(--red);background:none;color:var(--red)}
+.dm-btn:not(:disabled):hover{background:var(--red);color:var(--panel)}
+.dm-btn:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+.dm-btn:disabled{opacity:.45;cursor:not-allowed}
+.dm.alert{border-color:var(--red);animation:dmp 1.4s ease-in-out infinite}
+.dm.alert .dm-btn{background:var(--red);color:var(--panel)}
+@keyframes dmp{0%,100%{box-shadow:0 0 0 0 rgba(226,101,91,0)}50%{box-shadow:0 0 0 6px rgba(226,101,91,.35)}}
+@media (prefers-reduced-motion:reduce){.dm.alert{animation:none}}
+body.play #pts,body.play .cfg-only,body.play [data-add],body.play .ico.del,body.play #reset,body.play #print,body.play .arrows{display:none}
+#play-btn[aria-pressed="true"]{background:var(--sea);color:var(--panel)}
+@media print{.dm-btn{display:none}}
 </style>
 </head>
 <body>
@@ -218,6 +234,7 @@ a.mini{text-decoration:none;display:inline-block}
     <div class="tools">
       <a id="back" class="mini" href="index.html">← Fichas</a>
       <span id="cloud-st" class="cst" role="status" aria-live="polite"></span>
+      <button id="play-btn" type="button" aria-pressed="false">Modo sessão</button>
       <button id="dc-btn" type="button" aria-expanded="false" aria-controls="dc-panel">Discord</button>
       <button id="reset" type="button">Restaurar valores</button>
       <button id="print" type="button">Salvar como PDF</button>
@@ -281,6 +298,12 @@ a.mini{text-decoration:none;display:inline-block}
       </div>
     </div>
 
+    <div class="dm" id="dm" hidden>
+      <div class="dm-info"><b>Duro de Matar <span id="dm-n">0/0</span></b><small id="dm-hint" aria-live="polite"></small></div>
+      <button id="dm-use" class="dm-btn" type="button">Sobreviver com 1 de vida</button>
+      <button id="dm-reset" class="mini" type="button">Novo arco (restaurar usos)</button>
+    </div>
+
     <h2>Atributos</h2>
     <div class="row">
       <div class="stat"><div class="v">0</div><div class="n">Força</div></div>
@@ -320,11 +343,11 @@ a.mini{text-decoration:none;display:inline-block}
     <h2 class="hrow"><span>Habilidades passivas de classe</span><span class="btns"><button class="mini" type="button" data-add="passivas">+ Habilidade passiva</button></span></h2>
     <div id="passivas"></div>
 
-    <h2>Classes <small class="cst">(até 2 · 20 pts cada)</small></h2>
-    <div id="classes"></div>
+    <h2 class="cfg-only">Classes <small class="cst">(até 2 · 20 pts cada)</small></h2>
+    <div id="classes" class="cfg-only"></div>
 
-    <h2>Aptidões</h2>
-    <div id="aptidoes"></div>
+    <h2 class="cfg-only">Aptidões</h2>
+    <div id="aptidoes" class="cfg-only"></div>
   </div>
   </div>
 </main>
