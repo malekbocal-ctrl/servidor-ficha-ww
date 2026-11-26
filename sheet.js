@@ -147,15 +147,13 @@ function classText(c){
   return L.join("\n");
 }
 function buildPoints(){
+  buildActs();
   $id("dm-use").addEventListener("click", useDM);
   $id("dm-reset").addEventListener("click", function(){
     if(!(S.dmUsed > 0)){ toast("Os usos de Duro de Matar já estão completos."); return; }
     if(!confirm("Novo arco: restaurar os usos de Duro de Matar?")){ return; }
     S.dmUsed = 0; show();
   });
-  $id("play-btn").addEventListener("click", function(){ setPlay(!document.body.classList.contains("play")); });
-  var wasPlay = false; try { wasPlay = localStorage.getItem("ww-play") === "1"; } catch(e){}
-  setPlay(wasPlay);
   var cr = $id("classes"), ar = $id("aptidoes");
   if(!cr || !ar){ return; }
   var chosen = el("div", "cls-chosen"), pick = el("div", "cls-grid"), add = el("button", "mini cls-add");
@@ -211,6 +209,54 @@ function buildPoints(){
     ar.appendChild(d); ptsReg.apt.push({a:a, d:d, fr:fr, cs:cs, mn:mn, ct:ct, pl:pl});
   });
 }
+var ACT_KEYS = ["padrao", "mov", "livre"], ACT_NAMES = {padrao:"Ação padrão", mov:"Ação de movimento", livre:"Ação livre"};
+var actReg = {};
+function mkActRow(it){
+  var r = el("div", "act-row"), l = el("label"), s = el("select");
+  s.id = "act-" + it.id; l.setAttribute("for", s.id); l.textContent = "Tipo de ação:";
+  ACT_KEYS.forEach(function(k){ var o = el("option"); o.value = k; o.textContent = ACT_NAMES[k]; s.appendChild(o); });
+  s.value = ACT_KEYS.indexOf(it.act) > -1 ? it.act : "padrao";
+  s.addEventListener("change", function(){ it.act = s.value; save(); });
+  r.appendChild(l); r.appendChild(s); return r;
+}
+function actMax(k){ return S.act[k + "Max"]; }
+function actUsed(k){ return Math.min(S.act[k + "Used"] || 0, actMax(k)); }
+function buildActs(){
+  [["pad", "padrão"], ["mov", "de movimento"]].forEach(function(x){
+    var k = x[0], box = $id("ctr-" + k); if(!box){ return; }
+    var pips = el("span", "pips"); pips.setAttribute("aria-hidden", "true");
+    var n = el("b", "ctr-n"); n.setAttribute("aria-live", "polite");
+    var sp = el("button", "act-btn"); sp.type = "button"; sp.textContent = "Gastar";
+    var bk = el("button", "mini"); bk.type = "button"; bk.textContent = "Devolver";
+    var mx = el("span", "ctr-max"), mn = el("button", "mini stp"), pl = el("button", "mini stp"), mv = el("b");
+    mn.type = "button"; mn.textContent = "−"; mn.setAttribute("aria-label", "Diminuir o máximo de ações " + x[1]);
+    pl.type = "button"; pl.textContent = "+"; pl.setAttribute("aria-label", "Aumentar o máximo de ações " + x[1]);
+    mx.appendChild(document.createTextNode("máx.")); mx.appendChild(mn); mx.appendChild(mv); mx.appendChild(pl);
+    box.appendChild(n); box.appendChild(pips); box.appendChild(sp); box.appendChild(bk); box.appendChild(mx);
+    sp.addEventListener("click", function(){
+      if(actMax(k) - actUsed(k) <= 0){ toast("Sem ações " + x[1] + " restantes neste turno."); return; }
+      S.act[k + "Used"] = actUsed(k) + 1; show();
+    });
+    bk.addEventListener("click", function(){ if(actUsed(k) > 0){ S.act[k + "Used"] = actUsed(k) - 1; show(); } });
+    mn.addEventListener("click", function(){ S.act[k + "Max"] = Math.max(0, actMax(k) - 1); S.act[k + "Used"] = actUsed(k); show(); });
+    pl.addEventListener("click", function(){ S.act[k + "Max"] = Math.min(9, actMax(k) + 1); show(); });
+    actReg[k] = {pips:pips, n:n, sp:sp, bk:bk, mv:mv, mn:mn, pl:pl};
+  });
+  $id("new-turn").addEventListener("click", function(){ S.act.padUsed = 0; S.act.movUsed = 0; show(); });
+  $id("play-reset-uses").addEventListener("click", function(){ resetUses(["ativas"]); show(); });
+  document.addEventListener("ww-mode", function(){ renderAll(); refreshUI(); rollAtkLabels(); });
+}
+function updActs(){
+  ["pad", "mov"].forEach(function(k){
+    var r = actReg[k]; if(!r){ return; }
+    var max = actMax(k), used = actUsed(k), rem = Math.max(0, max - used);
+    r.n.textContent = rem + "/" + max; r.mv.textContent = max;
+    r.pips.textContent = "";
+    for(var i = 0; i < max; i++){ r.pips.appendChild(el("span", "pip" + (i < rem ? " on" : ""))); }
+    r.sp.disabled = rem <= 0; r.bk.disabled = used <= 0;
+    r.mn.disabled = max <= 0; r.pl.disabled = max >= 9;
+  });
+}
 function dmOwned(){ return (S.apt["Duro de Matar"] || 0) + freeApt("Duro de Matar"); }
 function updDM(){
   var box = $id("dm"); if(!box){ return; }
@@ -226,12 +272,6 @@ function useDM(){
   if(dmOwned() - (S.dmUsed || 0) <= 0 || +hp.value > 0){ return; }
   S.dmUsed = (S.dmUsed || 0) + 1;
   hp.max = Math.max(1, +hp.max); hp.value = 1; show();
-}
-function setPlay(on){
-  document.body.classList.toggle("play", on);
-  var b = $id("play-btn");
-  b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Modo edição" : "Modo sessão";
-  try { localStorage.setItem("ww-play", on ? "1" : "0"); } catch(e){}
 }
 function updPoints(){
   var lf = $id("pts-left"); if(!lf){ return; }
@@ -266,7 +306,7 @@ function updPoints(){
   document.querySelectorAll(".arrows .upb").forEach(function(b){ b.classList.toggle("blocked", left < 1); });
 }
 
-var S = {ident:{}, classes:[], apt:{}}, BASE = {fo:0,des:0,agi:0,eng:0,vig:0,int:0};
+var S = {ident:{}, classes:[], apt:{}, act:{}}, BASE = {fo:0,des:0,agi:0,eng:0,vig:0,int:0};
 var atkReg = [], uses = {}, nid = 1, awakened = false, reg = [], lastHM = null, lastEM = null;
 
 function fromDef(){
@@ -420,7 +460,7 @@ function addSwitches(){
 }
 
 function refreshUI(){
-  renderStats(); updPoints(); updDM();
+  renderStats(); updPoints(); updDM(); updActs();
   document.body.classList.toggle("awake", awakened);
   document.getElementById("awake-tag").hidden = !awakened;
   document.getElementById("add-despertar").hidden = S.despertar.length > 0;
@@ -468,12 +508,69 @@ function save(){
 function show(){ refreshUI(); rollAtkLabels(); save(); stSchedule(); }
 
 function spend(n){ est.value = Math.max(0, +est.value - n); show(); }
+/* ---- Música do despertar ---- */
+var AWAKE_MUSIC = "overtaken.mp3", AWAKE_VOL = 0.2, FADE_IN_MS = 5000, FADE_OUT_MS = 1200;
+var music = null, mctx = null, mgain = null, fadeT = null, muteBtn = null;
+function setVol(v){ if(mgain){ mgain.gain.value = v; } else if(music){ music.volume = v; } }
+function syncMute(){
+  if(!muteBtn || !music){ return; }
+  var t = music.muted ? "Ativar o som da música" : "Silenciar a música";
+  muteBtn.textContent = music.muted ? "🔇" : "🔊"; muteBtn.title = t; muteBtn.setAttribute("aria-label", t);
+}
+function showMute(){
+  if(!muteBtn){
+    muteBtn = el("button", "mute-btn"); muteBtn.type = "button";
+    muteBtn.addEventListener("click", function(){ if(music){ music.muted = !music.muted; syncMute(); } });
+    document.body.appendChild(muteBtn);
+  }
+  syncMute(); muteBtn.hidden = false;
+}
+function hideMute(){ if(muteBtn){ muteBtn.hidden = true; } }
+function ensureMusic(){
+  if(music){ return music; }
+  music = new Audio(); music.preload = "auto"; music.loop = false; music.src = AWAKE_MUSIC;
+  music.addEventListener("playing", showMute);
+  music.addEventListener("ended", function(){ clearInterval(fadeT); hideMute(); });
+  music.addEventListener("error", hideMute);
+  return music;
+}
+function playAwakeMusic(){
+  try {
+    var a = ensureMusic(); clearInterval(fadeT);
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(AC && !mgain){
+      try { mctx = new AC(); mgain = mctx.createGain(); mctx.createMediaElementSource(a).connect(mgain); mgain.connect(mctx.destination); }
+      catch(e){ mgain = null; }
+    }
+    if(mctx && mctx.state === "suspended"){ mctx.resume(); }
+    a.pause(); a.currentTime = 0; a.muted = false; a.volume = mgain ? 1 : 0; setVol(0);
+    var pr = a.play(); if(pr && pr.catch){ pr.catch(hideMute); }
+    var t0 = Date.now();
+    fadeT = setInterval(function(){
+      var k = Math.min(1, (Date.now() - t0) / FADE_IN_MS);
+      setVol(AWAKE_VOL * k * k);
+      if(k >= 1){ clearInterval(fadeT); }
+    }, 80);
+  } catch(e){}
+}
+function stopAwakeMusic(){
+  hideMute();
+  if(!music || music.paused){ return; }
+  clearInterval(fadeT);
+  var v0 = mgain ? mgain.gain.value : music.volume, t0 = Date.now();
+  fadeT = setInterval(function(){
+    var k = Math.min(1, (Date.now() - t0) / FADE_OUT_MS);
+    setVol(v0 * (1 - k));
+    if(k >= 1){ clearInterval(fadeT); music.pause(); music.currentTime = 0; }
+  }, 60);
+}
+
 function toggleAwake(){
   if(!awakened){
     var e = costEst((S.despertar[0] || {}).c) || 0;
     if(+est.value < e){ return; }
-    est.value = +est.value - e; awakened = true;
-  } else { awakened = false; }
+    est.value = +est.value - e; awakened = true; playAwakeMusic();
+  } else { awakened = false; stopAwakeMusic(); }
   show();
 }
 
@@ -497,13 +594,14 @@ function mkItem(sec, it){
   dl.addEventListener("click", function(){
     S[sec] = S[sec].filter(function(x){ return x !== it; });
     delete uses[it.id];
-    if(sec === "despertar"){ awakened = false; }
+    if(sec === "despertar"){ awakened = false; stopAwakeMusic(); }
     renderAll(); show();
   });
   h.appendChild(nm); h.appendChild(cs); h.appendChild(u); h.appendChild(ex); h.appendChild(dl);
   var w = el("div", "desc"), i = el("div");
   var p = makeEditable(el("p"), "descrição", function(v){ it.d = v; if(sec === "despertar"){ refreshUI(); } save(); });
   p.classList.remove("ed"); p.textContent = it.d;
+  if(sec !== "passivas"){ i.appendChild(mkActRow(it)); }
   i.appendChild(p); w.appendChild(i);
   d.appendChild(h); d.appendChild(w);
   reg.push({sec:sec, it:it, u:u});
@@ -694,6 +792,7 @@ function mkAttack(it){
   var w = el("div", "desc"), i2 = el("div");
   var p = makeEditable(el("p"), "dano e efeitos do ataque", function(v){ it.d = v; updDm(); save(); });
   p.classList.remove("ed"); p.textContent = it.d || "";
+  i2.appendChild(mkActRow(it));
   i2.appendChild(p);
   w.appendChild(i2);
   d.appendChild(h); d.appendChild(w); d.appendChild(res);
@@ -701,14 +800,19 @@ function mkAttack(it){
   return d;
 }
 
+function rootFor(sec, it){
+  if(document.body.classList.contains("play") && sec !== "passivas"){
+    return document.getElementById("grp-" + (ACT_KEYS.indexOf(it.act) > -1 ? it.act : "padrao"));
+  }
+  return document.getElementById(sec);
+}
 function renderAll(){
   atkReg = [];
-  var ar = document.getElementById("ataques"); ar.innerHTML = "";
-  S.ataques.forEach(function(it){ ar.appendChild(mkAttack(it)); });
+  ["ataques"].concat(SECS, ["grp-padrao", "grp-mov", "grp-livre"]).forEach(function(id){ document.getElementById(id).innerHTML = ""; });
+  S.ataques.forEach(function(it){ rootFor("ataques", it).appendChild(mkAttack(it)); });
   reg = [];
   SECS.forEach(function(sec){
-    var root = document.getElementById(sec); root.innerHTML = "";
-    S[sec].forEach(function(it){ root.appendChild(mkItem(sec, it)); });
+    S[sec].forEach(function(it){ rootFor(sec, it).appendChild(mkItem(sec, it)); });
   });
 }
 
@@ -744,9 +848,6 @@ function resetUses(secs){
   });
 }
 document.getElementById("reset-uses").addEventListener("click", function(){ resetUses(["ativas"]); show(); });
-document.getElementById("reset").addEventListener("click", function(){
-  hp.value = hp.max; est.value = est.max; awakened = false; S.dmUsed = 0; resetUses(SECS); show();
-});
 (function(){
   var btn = document.getElementById("dc-btn"), pn = document.getElementById("dc-panel"),
       inp = document.getElementById("dc-url"), st = document.getElementById("dc-st");
@@ -843,7 +944,6 @@ document.getElementById("reset").addEventListener("click", function(){
     im.src = url;
   });
 })();
-document.getElementById("print").addEventListener("click", function(){ window.print(); });
 
 hp.max = BASE.vig * 20; hp.value = hp.max;
 est.max = BASE.eng * 5; est.value = est.max;
@@ -873,6 +973,12 @@ S.classes = Array.isArray(S.classes) ? S.classes.filter(function(c, i, a){ retur
 if(!S.apt || typeof S.apt !== "object" || Array.isArray(S.apt)){ S.apt = {}; }
 if(POLY.indexOf(S.poly) < 0 || S.classes.indexOf("Infantaria") < 0){ S.poly = ""; }
 S.dmUsed = Math.max(0, parseInt(S.dmUsed, 10) || 0);
+if(!S.act || typeof S.act !== "object" || Array.isArray(S.act)){ S.act = {}; }
+["pad", "mov"].forEach(function(k){
+  var m = parseInt(S.act[k + "Max"], 10), u = parseInt(S.act[k + "Used"], 10);
+  S.act[k + "Max"] = isNaN(m) ? 1 : Math.max(0, Math.min(9, m));
+  S.act[k + "Used"] = isNaN(u) ? 0 : Math.max(0, Math.min(u, S.act[k + "Max"]));
+});
 APTS.forEach(function(a){ var v = parseInt(S.apt[a.n], 10); S.apt[a.n] = isNaN(v) || v < 0 ? 0 : v; });
 
 document.querySelectorAll(".ed-id").forEach(function(e){
