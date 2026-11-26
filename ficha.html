@@ -207,9 +207,41 @@ a.mini{text-decoration:none;display:inline-block}
 .dm.alert .dm-btn{background:var(--red);color:var(--panel)}
 @keyframes dmp{0%,100%{box-shadow:0 0 0 0 rgba(226,101,91,0)}50%{box-shadow:0 0 0 6px rgba(226,101,91,.35)}}
 @media (prefers-reduced-motion:reduce){.dm.alert{animation:none}}
-body.play #pts,body.play .cfg-only,body.play [data-add],body.play .ico.del,body.play #reset,body.play #print,body.play .arrows{display:none}
-#play-btn[aria-pressed="true"]{background:var(--sea);color:var(--panel)}
+body.play #pts,body.play .cfg-only,body.play [data-add],body.play .ico.del,body.play .arrows{display:none}
+#play-btn{font-size:1rem;font-weight:700;padding:6px 20px;border-radius:999px;background:var(--sea);color:var(--panel);border:2px solid var(--sea);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#play-btn:hover,#play-btn:focus-visible{background:var(--sea);color:var(--panel);border-color:var(--ink);filter:brightness(1.12)}
+#play-btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:#14283b}
+#play-btn[aria-pressed="true"]:hover,#play-btn[aria-pressed="true"]:focus-visible{background:var(--gold);color:#14283b;border-color:var(--ink)}
 @media print{.dm-btn{display:none}}
+.play-only{display:none}
+body.play .play-only{display:block}
+body.play .edit-only,body.play .act-row{display:none}
+.grp:empty::before{content:"Nenhuma habilidade neste tipo de ação.";display:block;color:var(--muted);font-size:.95rem;margin-bottom:8px}
+.act-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:2px 0 6px;font-size:.9rem;font-weight:700}
+.act-row select{font:inherit;font-weight:400;padding:3px 8px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.turn-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
+.act-btn{font:inherit;font-weight:700;cursor:pointer;padding:6px 18px;border-radius:999px;border:2px solid var(--sea);background:var(--sea);color:var(--panel)}
+.act-btn:hover:not(:disabled){filter:brightness(1.12)}
+.act-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.act-btn:disabled{opacity:.45;cursor:not-allowed}
+.ctr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 10px}
+.ctr-n{font-size:1.5rem;min-width:3ch}
+.pips{display:inline-flex;gap:5px}
+.pip{width:14px;height:14px;border-radius:50%;border:2px solid var(--sea)}
+.pip.on{background:var(--sea)}
+.ctr-max{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
+.ctr-max b{color:var(--ink);min-width:1.2ch;text-align:center}
+body.play .item.awake{border-color:var(--gold)}
+body.play .item.awake .use{font-size:1.05rem;padding:8px 22px;border-radius:999px;background:var(--gold);border:2px solid var(--gold);color:#14283b;box-shadow:0 0 0 0 rgba(217,168,70,.6);animation:awk 1.8s ease-in-out infinite}
+body.play .item.awake .use:hover:not(:disabled):not(.on){background:var(--gold);color:#14283b;filter:brightness(1.12)}
+body.play .item.awake .use:disabled{animation:none;opacity:.5}
+body.play .item.awake .use.on{background:var(--red);border-color:var(--red);color:#fff;animation:none}
+@keyframes awk{0%,100%{box-shadow:0 0 0 0 rgba(217,168,70,0)}50%{box-shadow:0 0 0 7px rgba(217,168,70,.35)}}
+@media (prefers-reduced-motion:reduce){body.play .item.awake .use{animation:none}}
+.mute-btn{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:40;width:44px;height:44px;border-radius:50%;border:2px solid var(--gold);background:var(--panel);color:var(--ink);font-size:1.2rem;line-height:1;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.35)}
+.mute-btn:hover{filter:brightness(1.15)}
+.mute-btn:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+@media print{.mute-btn{display:none}}
 </style>
 </head>
 <body>
@@ -236,8 +268,6 @@ body.play #pts,body.play .cfg-only,body.play [data-add],body.play .ico.del,body.
       <span id="cloud-st" class="cst" role="status" aria-live="polite"></span>
       <button id="play-btn" type="button" aria-pressed="false">Modo sessão</button>
       <button id="dc-btn" type="button" aria-expanded="false" aria-controls="dc-panel">Discord</button>
-      <button id="reset" type="button">Restaurar valores</button>
-      <button id="print" type="button">Salvar como PDF</button>
     </div>
   </div>
 
@@ -328,17 +358,32 @@ body.play #pts,body.play .cfg-only,body.play [data-add],body.play .ico.del,body.
   </div>
 
   <div class="col">
-    <h2 class="hrow"><span>Ataques</span><span class="btns"><button class="mini" type="button" data-add="ataques">+ Ataque</button></span></h2>
-    <div id="ataques"></div>
+    <div class="play-only" id="play-acts">
+      <div class="turn-bar">
+        <button id="new-turn" class="act-btn" type="button">Novo turno</button>
+        <button id="play-reset-uses" class="mini" type="button">Restaurar usos</button>
+      </div>
+      <h2>Ações padrão</h2>
+      <div class="ctr" id="ctr-pad"></div>
+      <div id="grp-padrao" class="grp"></div>
+      <h2>Ações de movimento</h2>
+      <div class="ctr" id="ctr-mov"></div>
+      <div id="grp-mov" class="grp"></div>
+      <h2>Ações livres <small class="cst">(ilimitadas)</small></h2>
+      <div id="grp-livre" class="grp"></div>
+    </div>
 
-    <h2 class="hrow"><span>Técnicas</span><span class="btns"><button class="mini" type="button" data-add="tecnicas">+ Técnica</button></span></h2>
-    <div id="tecnicas"></div>
+    <h2 class="hrow edit-only"><span>Ataques</span><span class="btns"><button class="mini" type="button" data-add="ataques">+ Ataque</button></span></h2>
+    <div id="ataques" class="edit-only"></div>
 
-    <h2 class="hrow"><span>Despertar</span><span class="btns"><button class="mini" type="button" data-add="despertar" id="add-despertar">+ Despertar</button></span></h2>
-    <div id="despertar"></div>
+    <h2 class="hrow edit-only"><span>Técnicas</span><span class="btns"><button class="mini" type="button" data-add="tecnicas">+ Técnica</button></span></h2>
+    <div id="tecnicas" class="edit-only"></div>
 
-    <h2 class="hrow"><span>Habilidades ativas de classe</span><span class="btns"><button id="reset-uses" class="mini" type="button">Restaurar usos</button><button class="mini" type="button" data-add="ativas">+ Habilidade ativa</button></span></h2>
-    <div id="ativas"></div>
+    <h2 class="hrow edit-only"><span>Despertar</span><span class="btns"><button class="mini" type="button" data-add="despertar" id="add-despertar">+ Despertar</button></span></h2>
+    <div id="despertar" class="edit-only"></div>
+
+    <h2 class="hrow edit-only"><span>Habilidades ativas de classe</span><span class="btns"><button id="reset-uses" class="mini" type="button">Restaurar usos</button><button class="mini" type="button" data-add="ativas">+ Habilidade ativa</button></span></h2>
+    <div id="ativas" class="edit-only"></div>
 
     <h2 class="hrow"><span>Habilidades passivas de classe</span><span class="btns"><button class="mini" type="button" data-add="passivas">+ Habilidade passiva</button></span></h2>
     <div id="passivas"></div>
@@ -354,6 +399,23 @@ body.play #pts,body.play .cfg-only,body.play [data-add],body.play .ico.del,body.
 
 
 <div id="toast" role="alert" hidden></div>
+
+<script>
+/* Modo sessão: independente do sheet.js, para funcionar mesmo com cache antigo */
+(function(){
+  var b = document.getElementById("play-btn"); if(!b){ return; }
+  function set(on){
+    document.body.classList.toggle("play", on);
+    document.dispatchEvent(new Event("ww-mode"));
+    b.setAttribute("aria-pressed", String(on));
+    b.textContent = on ? "Modo edição" : "Modo sessão";
+    try { localStorage.setItem("ww-play", on ? "1" : "0"); } catch(e){}
+  }
+  var was = false; try { was = localStorage.getItem("ww-play") === "1"; } catch(e){}
+  set(was);
+  b.addEventListener("click", function(){ set(!document.body.classList.contains("play")); });
+})();
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
@@ -402,7 +464,7 @@ body.play #pts,body.play .cfg-only,body.play [data-add],body.play .ico.del,body.
     document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden"){ flush(); } });
     window.addEventListener("pagehide", function(){ flush(); });
     var s = document.createElement("script");
-    s.src = "sheet.js";
+    s.src = "sheet.js?v=5";
     s.onload = function(){ window.CLOUD.armed = true; msg.hidden = true; main.classList.remove("loading"); say("Salvo na nuvem ✓", "ok"); };
     s.onerror = function(){ fail("Não foi possível carregar o arquivo sheet.js."); };
     document.body.appendChild(s);
