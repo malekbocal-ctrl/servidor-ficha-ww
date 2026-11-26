@@ -17,28 +17,28 @@ var ABBR = {FOR:"fo",DEX:"des",AGI:"agi",ENG:"eng",VIG:"vig",INT:"int"};
 /* ---- Sistema de pontos ---- */
 var POINTS = 120, CLASS_COST = 20, MAX_CLASSES = 2;
 var CLASSES = [
-  {n:"Imprudente", free:{"Duro de Matar":1}, items:[
+  {n:"Imprudente", tag:"Movimento duplo e imprevisibilidade", free:{"Duro de Matar":1}, items:[
     ["passivas","Freestyle vantajoso","","Vantagem em testes de Freestyle."],
     ["passivas","Movimento duplo","","Em combate, pode fazer duas ações de movimento."],
     ["passivas","Imprevisibilidade","","Não pode ser contra-atacado nem defendido, apenas esquivado."]
   ]},
-  {n:"Especialista", free:{}, items:[
+  {n:"Especialista", tag:"Haki, profissão e técnicas mais baratas", free:{}, items:[
     ["passivas","Haki mais rápido","","Reduz o tempo de recarga de um dos tipos de Haki, à escolha do personagem."],
     ["passivas","Profissão vantajosa","","Vantagem em testes de Profissão."],
     ["passivas","Mestre de técnicas","","Despertar custa metade do preço (4 pts) e Criação também (3 pts). O contador de pontos aplica o desconto."]
   ]},
-  {n:"Combatente", free:{}, items:[
+  {n:"Combatente", tag:"Artes marciais e giro de dano", free:{}, items:[
     ["passivas","Artes marciais vantajosas","","Vantagem em testes que utilizam arte marcial."],
     ["passivas","Determinação +1","","+1 ponto de determinação."],
     ["passivas","Bloquear agressivo","","Pode usar Bloquear Agressivo em batalhas 1 contra 1."],
     ["ativas","Giro de dano","1x por combate","Gira o dano duas vezes em um inimigo específico."]
   ]},
-  {n:"Infantaria", free:{"Criação":2}, items:[
+  {n:"Infantaria", tag:"Doutrinas armadas e Criação grátis", free:{"Criação":2}, items:[
     ["passivas","Doutrina armada vantajosa","","Vantagem em testes utilizando qualquer doutrina armada."],
     ["passivas","Doutrina Polivalente","","Aptidão gratuita: Doutrina Polivalente."],
     ["ativas","Golpe de doutrina","3x por combate","Sangramento, queimação e atordoamento sempre garantidos em qualquer ataque utilizando sua doutrina."]
   ]},
-  {n:"Maestro", free:{}, items:[
+  {n:"Maestro", tag:"Apoio à tripulação e controle de turnos", free:{}, items:[
     ["ativas","Incentivar","3x por combate","Dá vantagem nos testes de companheiros de tripulação."],
     ["passivas","Ação de movimento cedida","","Pode abrir mão da sua ação de movimento para que um companheiro tenha uma ação de movimento extra no próximo turno."],
     ["passivas","Iniciativa dominante","","Sempre que tirar o maior resultado de iniciativa em um combate, começa podendo atacar duas vezes ou se movimentar duas vezes."],
@@ -59,7 +59,7 @@ var APTS = [
   {n:"Despertar", cost:8, d:"Pode ser comprada quantas vezes quiser. Permite criar as transformações (de akuma e de doutrina)."},
   {n:"Duro de Matar", cost:4, d:"Ao tomar um dano massivo, o personagem pode gastar esta aptidão uma vez por sessão para sobreviver com 1 de vida."}
 ];
-var ptsReg = {cls:[], apt:[]}, toastT = null;
+var ptsReg = {cls:[], apt:[]}, toastT = null, clsPick = false;
 function $id(i){ return document.getElementById(i); }
 function classObj(n){ return CLASSES.filter(function(c){ return c.n === n; })[0] || null; }
 function freeApt(n, list){
@@ -112,11 +112,11 @@ function toggleClass(c){
       toast("Não é possível remover " + c.n + ": sem os descontos dela suas compras passariam de " + POINTS + " pontos. Remova alguma compra antes.");
       return;
     }
-    S.classes = next; removeClassItems(c.n);
+    S.classes = next; removeClassItems(c.n); clsPick = false;
   } else {
     if(S.classes.length >= MAX_CLASSES){ toast("Cada personagem pode ter no máximo " + MAX_CLASSES + " classes."); return; }
     if(!canSpend(CLASS_COST)){ return; }
-    S.classes.push(c.n); addClassItems(c);
+    S.classes.push(c.n); addClassItems(c); clsPick = false;
   }
   syncClasse(); renderAll(); show();
 }
@@ -146,16 +146,30 @@ function classText(c){
 function buildPoints(){
   var cr = $id("classes"), ar = $id("aptidoes");
   if(!cr || !ar){ return; }
+  var chosen = el("div", "cls-chosen"), pick = el("div", "cls-grid"), add = el("button", "mini cls-add");
+  pick.setAttribute("role", "group"); pick.setAttribute("aria-label", "Escolha uma classe");
+  add.type = "button";
+  add.addEventListener("click", function(){ clsPick = !clsPick; updPoints(); });
   CLASSES.forEach(function(c){
-    var d = el("div", "item"), h = el("div", "head");
+    var tile = el("button", "cls-tile"); tile.type = "button"; tile.title = classText(c);
+    var tn = el("span", "cn"); tn.textContent = c.n;
+    var tp = el("span", "cp"); tp.textContent = CLASS_COST + " pts";
+    var tt = el("span", "ct"); tt.textContent = c.tag;
+    tile.appendChild(tn); tile.appendChild(tp); tile.appendChild(tt);
+    tile.addEventListener("click", function(){ toggleClass(c); });
+    pick.appendChild(tile);
+    var d = el("div", "item sel cls-card"), h = el("div", "head");
     var nm = el("span", "nm"); nm.textContent = c.n;
     var cs = el("span", "cost"); cs.textContent = CLASS_COST + " pts";
-    var b = el("button", "use"); b.type = "button";
-    b.addEventListener("click", function(){ toggleClass(c); });
-    h.appendChild(nm); h.appendChild(cs); h.appendChild(b); h.appendChild(mkExpand(d));
-    d.appendChild(h); d.appendChild(mkDesc(classText(c)));
-    cr.appendChild(d); ptsReg.cls.push({c:c, d:d, b:b});
+    var rm = el("button", "ico"); rm.type = "button"; rm.textContent = "✕"; rm.setAttribute("aria-label", "Remover a classe " + c.n);
+    rm.addEventListener("click", function(){ toggleClass(c); });
+    h.appendChild(nm); h.appendChild(cs); h.appendChild(mkExpand(d)); h.appendChild(rm);
+    d.appendChild(h); d.appendChild(mkDesc(classText(c))); d.hidden = true;
+    chosen.appendChild(d);
+    ptsReg.cls.push({c:c, tile:tile, card:d});
   });
+  cr.appendChild(chosen); cr.appendChild(add); cr.appendChild(pick);
+  ptsReg.clsPick = pick; ptsReg.clsAdd = add;
   APTS.forEach(function(a){
     var d = el("div", "item apt"), h = el("div", "head");
     var nm = el("span", "nm"); nm.textContent = a.n;
@@ -181,12 +195,15 @@ function updPoints(){
   else if(left === 0){ wt = "Limite de " + POINTS + " pontos atingido. Compras bloqueadas."; }
   if(w.textContent !== wt){ w.textContent = wt; }
   w.hidden = !wt;
+  var nc = S.classes.length;
   ptsReg.cls.forEach(function(r){
     var on = S.classes.indexOf(r.c.n) > -1;
-    r.d.classList.toggle("sel", on);
-    r.b.textContent = on ? "Remover" : "Escolher";
-    r.b.classList.toggle("blocked", !on && (S.classes.length >= MAX_CLASSES || left < CLASS_COST));
+    r.card.hidden = !on; r.tile.hidden = on;
+    r.tile.classList.toggle("blocked", left < CLASS_COST);
   });
+  ptsReg.clsPick.hidden = !(nc === 0 || (nc === 1 && clsPick));
+  ptsReg.clsAdd.hidden = nc !== 1;
+  ptsReg.clsAdd.textContent = clsPick ? "Cancelar" : "+ Segunda classe (opcional)";
   ptsReg.apt.forEach(function(r){
     var a = r.a, paid = S.apt[a.n] || 0, fr = freeApt(a.n), owned = paid + fr, u = aptUnit(a);
     r.ct.textContent = owned;
