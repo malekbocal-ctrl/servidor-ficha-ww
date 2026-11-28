@@ -23,6 +23,19 @@
       }
       return cfgP;
     },
+    /* link do canal (https://discord.com/channels/servidor/canal) ou ID → ID; "" se vazio; null se inválido */
+    canalId: function(v){
+      v = (v || "").trim();
+      if(!v){ return ""; }
+      var m = /discord(?:app)?\.com\/channels\/(?:\d+|@me)\/(\d{5,25})/i.exec(v);
+      if(m){ return m[1]; }
+      return /^\d{5,25}$/.test(v) ? v : null;
+    },
+    /* canal de status próprio da ficha (ou "" se ela usa o canal padrão) */
+    canalFicha: function(id){
+      return sb.from("discord_fichas").select("canal_status").eq("ficha_id", id).maybeSingle()
+        .then(function(r){ return r.error || !r.data ? "" : (r.data.canal_status || ""); }, function(){ return ""; });
+    },
     enviar: function(acao, dados, imagem){
       return sb.auth.getSession().then(function(r){
         var s = r.data.session;

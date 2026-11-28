@@ -359,7 +359,10 @@ body:not(.play) .item.awake .use{display:none}
       <div id="dc-st" class="st" role="status" aria-live="polite"></div>
     </div>
     <div class="dcg">
-      <label class="dck"><input id="st-on" type="checkbox"> Status em tempo real (Vida, Estamina e Despertado) no canal de status</label>
+      <label class="dck"><input id="st-on" type="checkbox"> Status em tempo real (Vida, Estamina e Despertado)</label>
+      <div class="tt">Canal desta ficha</div>
+      <input id="st-canal" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="Link do canal (no Discord: botão direito no canal → Copiar link)" aria-label="Link do canal do Discord desta ficha">
+      <button id="st-canal-save" class="mini" type="button">Salvar canal</button>
       <div id="st-st" class="st" role="status" aria-live="polite"></div>
     </div>
   </div>
@@ -523,7 +526,7 @@ body:not(.play) .item.awake .use{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="common.js?v=3"></script>
+<script src="common.js?v=4"></script>
 <script>
 (function(){
   var msg = document.getElementById("boot-msg"), main = document.getElementById("sheet-main");
@@ -568,7 +571,7 @@ body:not(.play) .item.awake .use{display:none}
     document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden"){ flush(); } });
     window.addEventListener("pagehide", function(){ flush(); });
     var s = document.createElement("script");
-    s.src = "sheet.js?v=9";
+    s.src = "sheet.js?v=10";
     s.onload = function(){ window.CLOUD.armed = true; msg.hidden = true; main.classList.remove("loading"); say("Salvo na nuvem ✓", "ok"); };
     s.onerror = function(){ fail("Não foi possível carregar o arquivo sheet.js."); };
     document.body.appendChild(s);

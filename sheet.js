@@ -704,7 +704,7 @@ function mkItem(sec, it){
 /* Discord: tudo passa pelo bot (window.WW_DISCORD, em common.js). Os canais são escolhidos
    pelo mestre na tela de Fichas. Aqui cada um só liga ou desliga o envio neste navegador. */
 var DCON = "wanted-warriors-discord-rolagens", STON = "wanted-warriors-discord-status-on";
-var DC_ON = true, ST_ON = true, DCFG = null;
+var DC_ON = true, ST_ON = true, DCFG = null, FCANAL = "";   // FCANAL: canal de status próprio desta ficha
 try {
   DC_ON = localStorage.getItem(DCON) !== "0";
   ST_ON = localStorage.getItem(STON) !== "0";
@@ -715,7 +715,8 @@ var stBusy = false, stDirty = false, stLast = "", stTimer = null;
 function charName(){ return (S.ident && S.ident.nome || "").trim() || "Personagem"; }
 function dcBot(){ return window.WW_DISCORD || null; }
 function dcRolagens(){ return DC_ON && !!(DCFG && DCFG.canal_rolagens) && !!dcBot(); }
-function dcStatus(){ return ST_ON && !!(DCFG && DCFG.canal_status) && !!dcBot(); }
+function stCanal(){ return FCANAL || (DCFG && DCFG.canal_status) || ""; }
+function dcStatus(){ return ST_ON && !!stCanal() && !!dcBot(); }
 function dcPost(text){
   if(!dcBot()){ return Promise.reject(new Error("bot indisponível.")); }
   return dcBot().enviar("rolagem", {ficha: CLOUD.id, texto: text.slice(0, 1900)});
@@ -905,20 +906,39 @@ document.getElementById("reset-uses").addEventListener("click", function(){ rese
     else if(!DCFG.canal_rolagens){ say("O mestre ainda não escolheu o canal de rolagens (tela de Fichas → Discord)."); }
     else if(!DC_ON){ say("Rolagens desta ficha não vão para o Discord neste navegador."); }
     else { say("Ataques e danos rolados aqui vão para o canal de rolagens.", "ok"); }
-    if(!DCFG || !DCFG.canal_status){ stSay("O mestre ainda não escolheu o canal de status."); }
+    son.disabled = !stCanal();
+    if(!stCanal()){ stSay("Cole o link do canal desta ficha e clique em “Salvar canal” para ligar o status."); }
     else if(!ST_ON){ stSay("Status desligado neste navegador."); }
-    else if(!stLast){ stSay("Status ligado: a mensagem é atualizada quando Vida, Estamina ou Despertado mudam.", "ok"); }
+    else if(!stLast){
+      stSay(FCANAL ? "Status ligado no canal desta ficha: a mensagem é atualizada quando Vida, Estamina ou Despertado mudam."
+                   : "Status ligado no canal padrão do mestre (esta ficha não tem canal próprio).", "ok");
+    }
   }
+  var sci = document.getElementById("st-canal"), scb = document.getElementById("st-canal-save");
   con.checked = DC_ON; son.checked = ST_ON;
-  con.disabled = son.disabled = true;
+  con.disabled = son.disabled = true; scb.disabled = true;
   sync(); idle();
   if(dcBot()){
-    dcBot().canais().then(function(c){
-      DCFG = c;
-      con.disabled = !(c && c.canal_rolagens); son.disabled = !(c && c.canal_status);
+    Promise.all([dcBot().canais(), dcBot().canalFicha(CLOUD.id)]).then(function(r){
+      DCFG = r[0]; FCANAL = r[1]; sci.value = FCANAL;
+      con.disabled = !(DCFG && DCFG.canal_rolagens); scb.disabled = !DCFG;
       sync(); idle(); stRun(false);
     });
   }
+  scb.addEventListener("click", function(){
+    var id = dcBot().canalId(sci.value);
+    if(id === null){ stSay("Isso não é um link de canal do Discord. No Discord: botão direito no canal → Copiar link.", "err"); sci.focus(); return; }
+    if(id === FCANAL){ stSay(id ? "Esse já é o canal desta ficha." : "Esta ficha já usa o canal padrão.", "ok"); return; }
+    scb.disabled = true; stSay("Salvando o canal…");
+    dcBot().enviar("canal_ficha", {ficha: CLOUD.id, canal: id}).then(function(){
+      FCANAL = id; sci.value = id; stLast = ""; clearTimeout(stTimer);
+      sync(); idle();
+      if(dcStatus()){ stSay("Canal salvo ✓ Enviando o status para lá…", "ok"); stRun(true); }
+      else { stSay(id ? "Canal salvo ✓" : "Canal removido. Esta ficha volta a usar o canal padrão, se o mestre tiver um.", "ok"); }
+    }).catch(function(e){ stSay("Não foi possível salvar o canal: " + e.message, "err"); })
+      .then(function(){ scb.disabled = false; });
+  });
+  sci.addEventListener("keydown", function(ev){ if(ev.key === "Enter"){ ev.preventDefault(); scb.click(); } });
   btn.addEventListener("click", function(){
     pn.hidden = !pn.hidden; btn.setAttribute("aria-expanded", String(!pn.hidden));
   });

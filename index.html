@@ -114,7 +114,7 @@ h2.hrow .btn:hover{background:var(--gold);color:var(--panel)}
           <div class="dcr"><input id="dcf-combate" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://discord.com/channels/…"><button class="mini" type="button" data-test="combate">Testar</button></div></div>
         <div class="dcf"><label for="dcf-rolagens">Rolagens de ataque e dano das fichas</label>
           <div class="dcr"><input id="dcf-rolagens" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://discord.com/channels/…"><button class="mini" type="button" data-test="rolagens">Testar</button></div></div>
-        <div class="dcf"><label for="dcf-status">Status em tempo real (Vida, Estamina, Despertado) de cada ficha</label>
+        <div class="dcf"><label for="dcf-status">Status: canal padrão (opcional). Cada ficha pode ter o próprio canal, escolhido no botão Discord da ficha; este só vale para as fichas sem canal próprio.</label>
           <div class="dcr"><input id="dcf-status" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://discord.com/channels/…"><button class="mini" type="button" data-test="status">Testar</button></div></div>
         <div class="row"><button id="dcf-save" class="pri" type="button">Salvar canais</button></div>
         <div id="dcf-msg" class="msg" role="status" aria-live="polite"></div>
@@ -125,7 +125,7 @@ h2.hrow .btn:hover{background:var(--gold);color:var(--panel)}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="common.js?v=3"></script>
+<script src="common.js?v=4"></script>
 <script>
 (function(){
   function $(id){ return document.getElementById(id); }
