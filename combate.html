@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Combate – Wanted Warriors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9eef0; --panel:#f7f9fa; --ink:#14283b; --muted:#5b6c7b; --line:#b9c6cf;
+  --red:#b5342b; --gold:#a9791c; --sea:#1f6f8b; --fillb:#2f8f5b;
+  --cell:30px;
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1a26; --panel:#152636; --ink:#e6edf2; --muted:#93a5b4; --line:#2c4256;
+    --red:#e2655b; --gold:#d9a846; --sea:#58b4d1; --fillb:#4cc38a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1a26; --panel:#152636; --ink:#e6edf2; --muted:#93a5b4; --line:#2c4256;
+  --red:#e2655b; --gold:#d9a846; --sea:#58b4d1; --fillb:#4cc38a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Alegreya Sans",system-ui,sans-serif;font-size:17px;line-height:1.45}
+main{max-width:1500px;margin:0 auto;padding:18px 22px 40px}
+h1{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:2.2rem;line-height:1;margin:0}
+h2{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.4rem;color:var(--red);margin:0 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line)}
+button,.btn{font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--sea);background:none;color:var(--sea);padding:5px 12px;text-decoration:none;display:inline-block}
+button:hover:not(:disabled),.btn:hover{background:var(--sea);color:var(--panel)}
+button.pri{background:var(--sea);color:var(--panel)}
+button.pri:hover:not(:disabled){filter:brightness(1.1)}
+button.go{background:var(--gold);border-color:var(--gold);color:#14283b}
+button.go:hover:not(:disabled){background:var(--gold);color:#14283b;filter:brightness(1.1)}
+button.dng{border-color:var(--red);color:var(--red)}
+button.dng:hover:not(:disabled){background:var(--red);color:var(--panel)}
+button.on{color:var(--fillb);border-color:var(--fillb)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.mini{font-weight:500;font-size:.9rem;color:var(--muted);border-color:var(--line);padding:3px 10px}
+.mini:hover:not(:disabled){background:none;color:var(--ink);border-color:var(--ink)}
+button:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:10px}
+.top .sp{flex:1}
+.msg{color:var(--muted);font-size:.95rem;min-height:1.45em} .msg.err{color:var(--red)} .msg.ok{color:var(--fillb)}
+.status{display:inline-block;font-size:.85rem;font-weight:700;padding:1px 10px;border:1px solid var(--line);color:var(--muted)}
+.status.live{border-color:var(--gold);color:var(--gold)}
+#boot{max-width:640px;margin:60px auto;padding:20px;text-align:center;color:var(--muted)}
+#boot a{color:var(--sea)}
+
+.dcp{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px;padding:10px 12px;border:1px solid var(--line);background:var(--panel)}
+.dcp .tt{flex:1 0 100%;font-weight:700;font-size:.95rem}
+.dcp input{flex:1 1 300px;min-width:0;font:inherit;font-size:.95rem;padding:5px 8px;color:var(--ink);background:var(--bg);border:1px solid var(--line)}
+.dcp .st{flex:1 0 100%;font-size:.9rem;color:var(--muted)}
+.dcp .st.ok{color:var(--fillb)} .dcp .st.err{color:var(--red)}
+
+.lay{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:980px){.lay{grid-template-columns:1fr}}
+
+/* ---- Tabuleiro ---- */
+.btools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;font-size:.9rem;color:var(--muted)}
+.wrap{overflow:auto;max-height:calc(100vh - 160px);border:2px solid var(--ink);background:var(--panel)}
+.board{position:relative;width:calc(var(--cell) * 30);height:calc(var(--cell) * 30);
+  background-color:var(--panel);
+  --grid:color-mix(in srgb,var(--muted) 45%,transparent);
+  background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px),linear-gradient(to bottom,var(--grid) 1px,transparent 1px);
+  background-size:var(--cell) var(--cell);touch-action:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.tok{position:absolute;width:calc(var(--cell) - 4px);height:calc(var(--cell) - 4px);margin:2px;border-radius:50%;border:2px solid var(--sea);background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:calc(var(--cell) * .38);color:var(--ink);user-select:none;-webkit-user-select:none;transition:left .12s,top .12s}
+.tok.mv{cursor:grab;touch-action:none}
+.tok img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.tok.drag{cursor:grabbing;transition:none;z-index:5;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.tok.mine{border-color:var(--fillb)}
+.tok.cur{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold)}
+.tok.sel{outline:2px dashed var(--ink);outline-offset:2px}
+.tok.down{filter:grayscale(1);opacity:.6}
+.tok:focus-visible{outline:2px solid var(--sea);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.tok{transition:none}}
+
+/* ---- Controlador ---- */
+.ctl{background:var(--panel);border:1px solid var(--line);padding:14px 16px}
+.round{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.round b{font-size:2rem;line-height:1}
+.round span{color:var(--muted)}
+.turnbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.turnbar .pri{flex:1}
+.plist{display:flex;flex-direction:column}
+.pr{border-bottom:1px solid var(--line)}
+.pr .row{display:flex;align-items:center;gap:10px;padding:7px 4px;cursor:pointer}
+.pr.cur{background:color-mix(in srgb,var(--gold) 16%,transparent);box-shadow:inset 3px 0 0 var(--gold)}
+.pr.sel .row{outline:1px dashed var(--muted);outline-offset:-1px}
+.pr.down .nm{text-decoration:line-through;color:var(--muted)}
+.av{flex:none;width:36px;height:36px;border-radius:50%;border:2px solid var(--sea);overflow:hidden;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem}
+.av img{width:100%;height:100%;object-fit:cover}
+.pr.cur .av{border-color:var(--gold)}
+.who{flex:1;min-width:0}
+.who .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who .nm small{font-weight:400;color:var(--fillb);margin-left:6px}
+.nums{display:flex;gap:12px;font-size:.8rem;color:var(--muted);line-height:1.2}
+.nums b{color:var(--ink);font-weight:700}
+.nums .hpv.low b{color:var(--red)}
+.ini{width:4.2ch;flex:none;font:inherit;font-weight:700;font-size:1.05rem;text-align:center;padding:2px 0;color:var(--ink);background:var(--bg);border:1px solid var(--line);-moz-appearance:textfield;appearance:textfield}
+.ini:read-only{background:none;border-color:transparent}
+.ini::-webkit-outer-spin-button,.ini::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.inilbl{font-size:.75rem;color:var(--muted);text-align:center}
+.edit{padding:4px 4px 10px 50px;display:flex;flex-direction:column;gap:6px}
+.edit .qa{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.edit input[type=number]{width:7ch;font:inherit;font-size:.9rem;padding:2px 6px;color:var(--ink);background:var(--bg);border:1px solid var(--line)}
+.edit .qa .mini{padding:2px 8px}
+.edit .lnk{font-size:.85rem;display:flex;gap:12px;flex-wrap:wrap}
+.edit a{color:var(--sea)}
+.empty{color:var(--muted);font-size:.95rem;padding:8px 0}
+.sync{font-size:.8rem;color:var(--muted);margin-top:10px}
+
+/* ---- Escolher fichas ---- */
+dialog{border:2px solid var(--ink);background:var(--panel);color:var(--ink);padding:0;width:min(520px,94vw);max-height:84vh}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+.dlg{display:flex;flex-direction:column;max-height:84vh}
+.dlg header{padding:14px 16px 0}
+.dlg .body{overflow:auto;padding:8px 16px}
+.dlg footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid var(--line)}
+.pick{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.pick input{width:18px;height:18px;accent-color:var(--sea)}
+.pick small{color:var(--muted);display:block;font-size:.8rem}
+.grpn{margin:12px 0 2px;font-size:.85rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+</style>
+</head>
+<body>
+<div id="boot" role="status">Carregando…</div>
+<main id="main" hidden>
+  <div class="top">
+    <a class="btn mini" href="index.html">← Fichas</a>
+    <h1>Combate</h1>
+    <span id="status" class="status"></span>
+    <span class="sp"></span>
+    <span class="m-only" style="display:contents">
+      <button id="add" type="button">+ Adicionar fichas</button>
+      <button id="start" class="go" type="button">⚔ Iniciar combate</button>
+      <button id="dc-btn" class="mini" type="button" aria-expanded="false" aria-controls="dc-panel">Discord</button>
+      <button id="end" class="dng" type="button">Encerrar combate</button>
+    </span>
+  </div>
+
+  <div id="dc-panel" class="dcp m-only" hidden>
+    <div class="tt">Tabuleiro no Discord (mensagem atualizada em tempo real)</div>
+    <input id="dc-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="URL do webhook do canal (https://discord.com/api/webhooks/...)" aria-label="URL do webhook do canal do combate">
+    <button id="dc-save" class="mini" type="button">Salvar</button>
+    <button id="dc-send" class="mini" type="button">Enviar agora</button>
+    <button id="dc-clear" class="mini" type="button">Remover</button>
+    <div id="dc-st" class="st" role="status" aria-live="polite"></div>
+  </div>
+
+  <div id="msg" class="msg" role="status" aria-live="polite"></div>
+
+  <div class="lay">
+    <section aria-label="Tabuleiro">
+      <div class="btools">
+        <span id="hint"></span>
+        <span style="flex:1"></span>
+        <button id="zo" class="mini" type="button" aria-label="Diminuir o zoom">−</button>
+        <span id="zv">100%</span>
+        <button id="zi" class="mini" type="button" aria-label="Aumentar o zoom">+</button>
+      </div>
+      <div class="wrap"><div id="board" class="board" role="application" aria-label="Tabuleiro de 30 por 30 casas"></div></div>
+    </section>
+
+    <aside class="ctl" aria-label="Controlador de combate">
+      <h2>Iniciativa</h2>
+      <div class="round"><b id="rnd">1</b><span>rodada</span><span style="flex:1"></span><span id="turn-nm"></span></div>
+      <div class="turnbar m-only">
+        <button id="prev" class="mini" type="button">◀ Anterior</button>
+        <button id="next" class="pri" type="button">Próximo turno ▶</button>
+      </div>
+      <div id="plist" class="plist"></div>
+      <div class="sync" id="sync"></div>
+    </aside>
+  </div>
+</main>
+
+<dialog id="dlg" aria-labelledby="dlg-t">
+  <div class="dlg">
+    <header><h2 id="dlg-t">Adicionar fichas ao combate</h2></header>
+    <div class="body" id="dlg-list"></div>
+    <footer>
+      <button id="dlg-cancel" class="mini" type="button">Cancelar</button>
+      <button id="dlg-ok" class="pri" type="button">Adicionar selecionadas</button>
+    </footer>
+  </div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function(){
+  var N = 30, OLDKEY = "wanted-warriors-combate", ZKEY = "wanted-warriors-combate-zoom", SEEN = "wanted-warriors-combate-visto";
+  function $(id){ return document.getElementById(id); }
+  function el(t, c, txt){ var e = document.createElement(t); if(c){ e.className = c; } if(txt !== undefined){ e.textContent = txt; } return e; }
+  function num(v){ var n = parseInt(v, 10); return isNaN(n) ? null : n; }
+  function boot(t, html){ var b = $("boot"); if(html){ b.innerHTML = html; } else { b.textContent = t; } b.hidden = false; $("main").hidden = true; }
+  var msgT = null;
+  function say(t, c){ $("msg").textContent = t || ""; $("msg").className = "msg" + (c ? " " + c : ""); clearTimeout(msgT); if(t){ msgT = setTimeout(function(){ say(""); }, 6000); } }
+  function initials(n){
+    var p = (n || "?").trim().split(/\s+/);
+    return ((p[0] || "?").charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : "")).toUpperCase();
+  }
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+
+  if(window.WW_MISSING){ boot("Configure o arquivo config.js com os dados do seu projeto Supabase (veja o LEIAME)."); return; }
+  var sb = window.sb;
+
+  /* ---- Estado ----
+     C.parts: [{id, ini, x, y}]  ·  C.info: {id: {nome, owner, thumb, hp, hpm, est, estm}}
+     Fica no Supabase (tabela combate). O mestre grava; o jogador só move a própria peça. */
+  function blank(){ return {round:1, turn:null, parts:[], info:{}}; }
+  function normalize(e){
+    e = e || {};
+    var c = {round: Math.max(1, num(e.round) || 1), turn: e.turn || null, info: (e.info && typeof e.info === "object") ? e.info : {}, parts: []};
+    (Array.isArray(e.parts) ? e.parts : []).forEach(function(p){
+      if(p && p.id){ c.parts.push({id: String(p.id), ini: p.ini === null || p.ini === undefined ? null : num(p.ini), x: num(p.x) || 0, y: num(p.y) || 0}); }
+    });
+    return c;
+  }
+  var C = blank(), ROW = {ativo:false, iniciado_em:null}, me = null, sel = null;
+  var F = {}, all = [];                 // só o mestre: dados completos das fichas
+  var pend = {}, pendT = {}, busy = {}; // gravações de Vida/EST pendentes
+  var saveT = null, saving = false, saveAgain = false, lastSent = "", movedLocal = {};
+
+  function info(id){ return C.info[id] || {nome:"Personagem"}; }
+  function canMove(p){ return me.master || (ROW.ativo && info(p.id).owner === me.id); }
+
+  function persist(){
+    if(!me || !me.master){ return; }
+    clearTimeout(saveT); saveT = setTimeout(saveNow, 250);
+    dcSchedule();
+  }
+  function saveNow(){
+    clearTimeout(saveT); saveT = null;
+    if(saving){ saveAgain = true; return; }
+    saving = true;
+    var st = {round:C.round, turn:C.turn, parts:C.parts, info:C.info};
+    lastSent = JSON.stringify(st);
+    var moved = movedLocal; movedLocal = {};
+    sb.from("combate").update({estado: st}).eq("id", 1).then(function(r){
+      if(r.error){ say("Erro ao salvar o combate: " + r.error.message, "err"); Object.keys(moved).forEach(function(k){ movedLocal[k] = true; }); }
+    }).then(function(){ saving = false; if(saveAgain){ saveAgain = false; saveNow(); } });
+  }
+
+  /* ---- Zoom ---- */
+  var zoom = 30;
+  try { zoom = Math.max(18, Math.min(60, num(localStorage.getItem(ZKEY)) || 30)); } catch(e){}
+  function setZoom(z){
+    zoom = Math.max(18, Math.min(60, z));
+    document.documentElement.style.setProperty("--cell", zoom + "px");
+    $("zv").textContent = Math.round(100 * zoom / 30) + "%";
+    $("zo").disabled = zoom <= 18; $("zi").disabled = zoom >= 60;
+    try { localStorage.setItem(ZKEY, String(zoom)); } catch(e){}
+  }
+  $("zo").addEventListener("click", function(){ setZoom(zoom - 6); });
+  $("zi").addEventListener("click", function(){ setZoom(zoom + 6); });
+
+  /* ---- Ordem de iniciativa ---- */
+  function order(){
+    return C.parts.map(function(p, i){ return {p:p, i:i}; }).sort(function(a, b){
+      var ai = a.p.ini === null ? -Infinity : a.p.ini, bi = b.p.ini === null ? -Infinity : b.p.ini;
+      return bi - ai || a.i - b.i;
+    }).map(function(x){ return x.p; });
+  }
+  function part(id){ return C.parts.filter(function(p){ return p.id === id; })[0] || null; }
+  function step(dir){
+    var o = order(); if(!o.length){ return; }
+    var i = o.findIndex(function(p){ return p.id === C.turn; });
+    if(i < 0){ C.turn = o[0].id; }
+    else {
+      var j = i + dir;
+      if(j >= o.length){ j = 0; C.round++; }
+      if(j < 0){ if(C.round > 1){ j = o.length - 1; C.round--; } else { j = 0; } }
+      C.turn = o[j].id;
+    }
+    sel = C.turn; persist(); render();
+  }
+  $("next").addEventListener("click", function(){ step(1); });
+  $("prev").addEventListener("click", function(){ step(-1); });
+
+  /* ---- Vida / Estamina: o mestre grava na ficha do jogador ---- */
+  function flush(id){
+    clearTimeout(pendT[id]);
+    var ch = pend[id]; if(!ch){ return; }
+    delete pend[id]; busy[id] = true;
+    // lê a ficha atual e troca só hp/est, para não apagar o resto
+    sb.from("fichas").select("data").eq("id", id).single().then(function(r){
+      if(r.error){ throw r.error; }
+      var d = r.data.data || {};
+      Object.keys(ch).forEach(function(k){ d[k] = ch[k]; });
+      return sb.from("fichas").update({data: d}).eq("id", id);
+    }).then(function(r){
+      if(r && r.error){ throw r.error; }
+      say("Salvo na ficha de " + info(id).nome + " ✓", "ok");
+    }).catch(function(e){
+      say("Erro ao salvar na ficha: " + (e && e.message || e), "err");
+    }).then(function(){ busy[id] = false; });
+  }
+  function adj(id, key, delta){
+    var f = F[id]; if(!f){ return; }
+    var max = key === "hp" ? f.hpm : f.estm, cur = f[key] || 0;
+    var v = Math.max(0, cur + delta); if(max){ v = Math.min(max, v); }
+    if(v === cur){ return; }
+    f[key] = v; syncInfo(id);
+    pend[id] = pend[id] || {}; pend[id][key] = v;
+    clearTimeout(pendT[id]); pendT[id] = setTimeout(function(){ flush(id); }, 600);
+    persist(); render();
+  }
+  window.addEventListener("pagehide", function(){ Object.keys(pend).forEach(flush); if(saveT){ saveNow(); } });
+
+  /* ---- Miniaturas das imagens (leves, para caber no combate compartilhado) ---- */
+  var thumbOf = {};
+  function pkey(s){ return s ? s.length + ":" + s.slice(-40) : ""; }
+  function makeThumb(src){
+    return new Promise(function(ok){
+      var im = new Image();
+      im.onload = function(){
+        try {
+          var S = 72, c = document.createElement("canvas"); c.width = S; c.height = S;
+          var k = Math.max(S / im.naturalWidth, S / im.naturalHeight), w = im.naturalWidth * k, h = im.naturalHeight * k;
+          c.getContext("2d").drawImage(im, (S - w) / 2, (S - h) / 2, w, h);
+          var d = c.toDataURL("image/webp", 0.8);
+          if(d.indexOf("data:image/webp") !== 0){ d = c.toDataURL("image/jpeg", 0.8); }
+          ok(d);
+        } catch(e){ ok(""); }
+      };
+      im.onerror = function(){ ok(""); };
+      im.src = src;
+    });
+  }
+  function syncInfo(id){
+    var f = F[id]; if(!f){ return false; }
+    var o = C.info[id] || {}, before = JSON.stringify(o);
+    o.nome = f.nome; o.owner = f.owner_id; o.hp = f.hp; o.hpm = f.hpm; o.est = f.est; o.estm = f.estm;
+    var k = pkey(f.portrait);
+    if(!k){ o.thumb = ""; o.pk = ""; }
+    else if(o.pk !== k){
+      if(thumbOf[k] !== undefined){ o.thumb = thumbOf[k]; o.pk = k; }
+      else {
+        thumbOf[k] = null;
+        makeThumb(f.portrait).then(function(t){
+          thumbOf[k] = t;
+          var oi = C.info[id]; if(oi){ oi.thumb = t; oi.pk = k; persist(); render(); }
+        });
+      }
+    }
+    C.info[id] = o;
+    return JSON.stringify(o) !== before;
+  }
+
+  /* ---- Tabuleiro ---- */
+  var board = $("board"), drag = null;
+  function occupied(x, y, except){ return C.parts.some(function(p){ return p.id !== except && p.x === x && p.y === y; }); }
+  function freeCell(){
+    for(var y = 0; y < N; y++){ for(var x = 0; x < N; x++){ if(!occupied(x, y)){ return {x:x, y:y}; } } }
+    return {x:0, y:0};
+  }
+  function moveTo(p, x, y){
+    if(x < 0 || y < 0 || x >= N || y >= N){ say("Fora do tabuleiro.", "err"); return false; }
+    if(occupied(x, y, p.id)){ say("Essa casa já está ocupada.", "err"); return false; }
+    if(p.x === x && p.y === y){ return true; }
+    var ox = p.x, oy = p.y;
+    p.x = x; p.y = y;
+    if(me.master){ movedLocal[p.id] = true; persist(); }
+    else {
+      sb.rpc("mover_peca", {p_ficha: p.id, p_x: x, p_y: y}).then(function(r){
+        if(r.error){ p.x = ox; p.y = oy; render(); say("Não foi possível mover: " + r.error.message, "err"); }
+      });
+    }
+    return true;
+  }
+  function select(id){ sel = id; render(); }
+  function cellFromEvent(ev){
+    var r = board.getBoundingClientRect();
+    return {x: Math.floor((ev.clientX - r.left) / zoom), y: Math.floor((ev.clientY - r.top) / zoom)};
+  }
+  function mkPic(i, cls){
+    var a = el("span", cls);
+    if(i.thumb){ var im = el("img"); im.src = i.thumb; im.alt = ""; im.draggable = false; a.appendChild(im); }
+    else { a.textContent = initials(i.nome); }
+    return a;
+  }
+  function mkToken(p){
+    var i = info(p.id), mv = canMove(p), t = mkPic(i, "tok");
+    t.setAttribute("data-id", p.id);
+    t.tabIndex = 0; t.setAttribute("role", "button");
+    t.setAttribute("aria-label", (i.nome || "Ficha") + ", coluna " + (p.x + 1) + ", linha " + (p.y + 1) + (mv ? ". Use as setas para mover." : ""));
+    t.title = i.nome || "";
+    t.style.left = "calc(var(--cell) * " + p.x + ")"; t.style.top = "calc(var(--cell) * " + p.y + ")";
+    t.classList.toggle("mv", mv);
+    t.classList.toggle("mine", !me.master && i.owner === me.id);
+    t.classList.toggle("cur", p.id === C.turn);
+    t.classList.toggle("sel", p.id === sel);
+    t.classList.toggle("down", i.hp === 0);
+    t.addEventListener("pointerdown", function(ev){
+      if(ev.button !== 0){ return; }
+      if(!mv){ select(p.id); return; }
+      ev.preventDefault(); t.focus({preventScroll:true});
+      drag = {p:p, t:t, sx:ev.clientX, sy:ev.clientY, moved:false, ox:p.x * zoom, oy:p.y * zoom};
+      t.setPointerCapture(ev.pointerId);
+    });
+    t.addEventListener("pointermove", function(ev){
+      if(!drag || drag.t !== t){ return; }
+      var dx = ev.clientX - drag.sx, dy = ev.clientY - drag.sy;
+      if(!drag.moved && Math.abs(dx) + Math.abs(dy) < 4){ return; }
+      drag.moved = true; t.classList.add("drag");
+      t.style.left = (drag.ox + dx) + "px"; t.style.top = (drag.oy + dy) + "px";
+    });
+    function end(ev){
+      if(!drag || drag.t !== t){ return; }
+      var d = drag; drag = null; t.classList.remove("drag");
+      if(d.moved && ev.type === "pointerup"){ var c = cellFromEvent(ev); moveTo(p, c.x, c.y); }
+      if(pendingRemote){ var pr = pendingRemote; pendingRemote = null; onRow(pr); }
+      select(p.id);
+    }
+    t.addEventListener("pointerup", end);
+    t.addEventListener("pointercancel", end);
+    t.addEventListener("keydown", function(ev){
+      var m = {ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1]}[ev.key];
+      if(!m){ if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); select(p.id); } return; }
+      if(!mv){ return; }
+      ev.preventDefault();
+      sel = p.id; moveTo(p, p.x + m[0], p.y + m[1]); render();
+      var nt = board.querySelector('[data-id="' + p.id + '"]'); if(nt){ nt.focus(); }
+    });
+    return t;
+  }
+
+  /* ---- Lista do controlador ---- */
+  function mkRow(p){
+    var i = info(p.id), mine = !me.master && i.owner === me.id;
+    var d = el("div", "pr"); d.setAttribute("data-id", p.id);
+    d.classList.toggle("cur", p.id === C.turn);
+    d.classList.toggle("sel", p.id === sel);
+    d.classList.toggle("down", i.hp === 0);
+    var row = el("div", "row"), who = el("div", "who"), nm = el("div", "nm", i.nome || "Sem nome");
+    if(mine){ nm.appendChild(el("small", "", "você")); }
+    var nums = el("div", "nums");
+    var hv = el("span", "hpv"); hv.appendChild(document.createTextNode("Vida ")); hv.appendChild(el("b", "", (i.hp === null || i.hp === undefined ? "—" : i.hp) + "/" + (i.hpm || "—")));
+    hv.classList.toggle("low", !!i.hpm && i.hp !== null && i.hp !== undefined && i.hp / i.hpm <= 0.25);
+    var ev = el("span"); ev.appendChild(document.createTextNode("EST ")); ev.appendChild(el("b", "", (i.est === null || i.est === undefined ? "—" : i.est) + "/" + (i.estm || "—")));
+    nums.appendChild(hv); nums.appendChild(ev);
+    who.appendChild(nm); who.appendChild(nums);
+    var iw = el("div"), ini = el("input", "ini");
+    ini.type = "number"; ini.inputMode = "numeric"; ini.value = p.ini === null ? "" : p.ini; ini.placeholder = "—";
+    ini.setAttribute("aria-label", "Iniciativa de " + (i.nome || "personagem"));
+    if(me.master){
+      ini.addEventListener("click", function(e){ e.stopPropagation(); });
+      ini.addEventListener("change", function(){
+        p.ini = num(ini.value); persist(); render(true);
+        var ni = $("plist").querySelector('.pr[data-id="' + p.id + '"] .ini'); if(ni && document.activeElement === document.body){ ni.focus(); }
+      });
+      ini.addEventListener("keydown", function(e){ if(e.key === "Enter"){ ini.blur(); } });
+    } else { ini.readOnly = true; ini.tabIndex = -1; }
+    iw.appendChild(ini); iw.appendChild(el("div", "inilbl", "inic."));
+    row.appendChild(mkPic(i, "av")); row.appendChild(who); row.appendChild(iw);
+    row.addEventListener("click", function(){ select(sel === p.id ? null : p.id); });
+    d.appendChild(row);
+    if(p.id === sel && (me.master || mine)){
+      var ed = el("div", "edit");
+      if(me.master){
+        [["hp", "Vida", "Dano", "Cura"], ["est", "EST", "Gastar", "Recuperar"]].forEach(function(x){
+          var q = el("div", "qa"), lb = el("span", "", x[1]), inp = el("input");
+          lb.style.cssText = "width:3.2ch;font-size:.85rem;color:var(--muted)";
+          inp.type = "number"; inp.min = "1"; inp.inputMode = "numeric"; inp.placeholder = "valor";
+          inp.setAttribute("aria-label", "Valor de " + x[1]);
+          var bm = el("button", "mini", x[2]), bp = el("button", "mini", x[3]); bm.type = "button"; bp.type = "button";
+          function go(sign){ var v = num(inp.value); if(!v || v <= 0){ inp.focus(); return; } adj(p.id, x[0], sign * v); }
+          bm.addEventListener("click", function(){ go(-1); }); bp.addEventListener("click", function(){ go(1); });
+          inp.addEventListener("keydown", function(e){ if(e.key === "Enter"){ go(-1); } });
+          q.appendChild(lb); q.appendChild(inp); q.appendChild(bm); q.appendChild(bp); ed.appendChild(q);
+        });
+      }
+      var lk = el("div", "lnk"), a = el("a", "", "Abrir ficha"); a.href = "ficha.html?id=" + encodeURIComponent(p.id); a.target = "_blank"; a.rel = "noopener";
+      lk.appendChild(a);
+      if(me.master){
+        var rm = el("button", "mini", "Remover do combate"); rm.type = "button";
+        rm.addEventListener("click", function(){
+          C.parts = C.parts.filter(function(x){ return x !== p; }); delete C.info[p.id];
+          if(C.turn === p.id){ C.turn = null; } sel = null; persist(); render();
+        });
+        lk.appendChild(rm);
+      }
+      ed.appendChild(lk);
+      d.appendChild(ed);
+    }
+    return d;
+  }
+
+  function render(force){
+    var ae = document.activeElement;
+    var focusId = ae && ae.classList && ae.classList.contains("tok") ? ae.getAttribute("data-id") : null;
+    board.textContent = "";
+    C.parts.forEach(function(p){ board.appendChild(mkToken(p)); });
+    if(focusId){ var t = board.querySelector('[data-id="' + focusId + '"]'); if(t){ t.focus({preventScroll:true}); } }
+    /* enquanto o mestre digita uma iniciativa, a lista não é redesenhada pela atualização automática */
+    var keepIni = !force && ae && ae.classList && ae.classList.contains("ini");
+    if(!keepIni){
+      var l = $("plist"); l.textContent = "";
+      var o = order();
+      if(!o.length){ l.appendChild(el("p", "empty", me.master ? "Nenhuma ficha no combate. Clique em “+ Adicionar fichas”." : "Nenhum personagem no combate ainda.")); }
+      o.forEach(function(p){ l.appendChild(mkRow(p)); });
+    }
+    $("rnd").textContent = C.round;
+    $("turn-nm").textContent = C.turn && C.info[C.turn] ? "Vez de " + info(C.turn).nome : "";
+    var st = $("status");
+    st.textContent = ROW.ativo ? "Combate ativo" : (me.master ? "Em preparo: só você vê" : "Sem combate");
+    st.classList.toggle("live", ROW.ativo);
+    if(me.master){
+      $("next").textContent = C.turn ? "Próximo turno ▶" : "Começar ▶";
+      $("next").disabled = !C.parts.length; $("prev").disabled = !C.turn;
+      $("start").hidden = ROW.ativo; $("start").disabled = !C.parts.length;
+      $("end").disabled = !ROW.ativo && !C.parts.length;
+      $("hint").textContent = "Tabuleiro 30 × 30 · arraste as peças · setas movem a selecionada";
+    } else {
+      var own = C.parts.some(function(p){ return info(p.id).owner === me.id; });
+      $("hint").textContent = !ROW.ativo ? "Nenhum combate no momento. Quando o mestre iniciar, ele aparece aqui."
+        : own ? "Arraste a peça do seu personagem (borda verde) ou use as setas." : "Você está assistindo ao combate.";
+    }
+  }
+
+  /* ---- Linha do combate (Supabase) ---- */
+  var pendingRemote = null;
+  function onRow(row){
+    if(!row){ return; }
+    if(drag){ pendingRemote = row; return; }
+    var wasActive = ROW.ativo, prevStart = ROW.iniciado_em;
+    ROW.ativo = !!row.ativo; ROW.iniciado_em = row.iniciado_em || null;
+    if(me.master){
+      if(row.estado && JSON.stringify(row.estado) !== lastSent){
+        var re = normalize(row.estado), last = {};
+        try { last = JSON.parse(lastSent || "{}"); } catch(e){}
+        // posições movidas pelos jogadores entram; o resto o mestre controla
+        re.parts.forEach(function(rp){
+          var p = part(rp.id);
+          if(p && !movedLocal[p.id]){ p.x = rp.x; p.y = rp.y; }
+        });
+        // turno passado pelo botão do Discord
+        if((re.turn !== (last.turn || null) || re.round !== (last.round || 1)) && !saveT && !saving){
+          C.turn = re.turn; C.round = re.round; sel = C.turn;
+          lastSent = JSON.stringify({round:C.round, turn:C.turn, parts:C.parts, info:C.info});
+        }
+        dcSchedule();
+      }
+    } else {
+      if(!ROW.ativo){ C = blank(); }
+      else { C = normalize(row.estado); }
+      if(ROW.ativo && ROW.iniciado_em){ try { localStorage.setItem(SEEN, ROW.iniciado_em); } catch(e){} }
+      if(wasActive && !ROW.ativo){ say("O mestre encerrou o combate."); }
+      if(ROW.ativo && prevStart !== ROW.iniciado_em){ say("O combate começou!", "ok"); }
+    }
+    render();
+  }
+  function fetchRow(){
+    return sb.from("combate").select("ativo,iniciado_em,estado").eq("id", 1).maybeSingle().then(function(r){
+      if(r.error){ throw r.error; }
+      return r.data;
+    });
+  }
+
+  /* ---- Mestre: fichas do Supabase ---- */
+  var COLS = "id,nome,portrait,owner_id,hp:data->>hp,hpm:data->>hpm,est:data->>est,estm:data->>estm,profiles(display_name)";
+  function applyF(rows){
+    var changed = false;
+    rows.forEach(function(f){
+      var o = F[f.id] || {};
+      o.nome = f.nome || "Sem nome"; o.owner_id = f.owner_id; o.ownerName = (f.profiles && f.profiles.display_name) || "";
+      if(f.portrait !== undefined){ o.portrait = f.portrait || ""; }
+      if(!pend[f.id] && !busy[f.id]){   // não sobrescreve um valor que o mestre acabou de mudar
+        o.hp = num(f.hp); o.hpm = num(f.hpm); o.est = num(f.est); o.estm = num(f.estm);
+      }
+      F[f.id] = o;
+      if(part(f.id) && syncInfo(f.id)){ changed = true; }
+    });
+    return changed;
+  }
+  function loadAll(){
+    return sb.from("fichas").select(COLS).order("nome").then(function(r){
+      if(r.error){ throw r.error; }
+      all = r.data; applyF(r.data);
+      var ids = {}; all.forEach(function(f){ ids[f.id] = true; });
+      var before = C.parts.length;
+      C.parts = C.parts.filter(function(p){ return ids[p.id]; });   // ficha excluída sai do combate
+      Object.keys(C.info).forEach(function(k){ if(!part(k)){ delete C.info[k]; } });
+      if(C.parts.length !== before){ persist(); }
+    });
+  }
+  function refreshStats(){
+    if(!C.parts.length || drag){ return; }
+    var ids = C.parts.map(function(p){ return p.id; });
+    sb.from("fichas").select("id,nome,owner_id,hp:data->>hp,hpm:data->>hpm,est:data->>est,estm:data->>estm,profiles(display_name)").in("id", ids).then(function(r){
+      if(r.error || !r.data){ return; }
+      if(applyF(r.data)){ persist(); }
+      stamp(); render();
+    });
+  }
+  function stamp(){
+    var d = new Date(), z = function(n){ return (n < 10 ? "0" : "") + n; };
+    $("sync").textContent = "Vida e Estamina atualizadas às " + z(d.getHours()) + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds()) + ".";
+  }
+
+  /* ---- Mestre: adicionar fichas ---- */
+  var dlg = $("dlg");
+  $("add").addEventListener("click", function(){
+    var box = $("dlg-list"); box.textContent = "";
+    var free = all.filter(function(f){ return !part(f.id); });
+    if(!free.length){ box.appendChild(el("p", "empty", "Todas as fichas já estão no combate.")); }
+    var groups = {}, ord = [];
+    free.forEach(function(f){ var k = (f.profiles && f.profiles.display_name) || "Sem jogador"; if(!groups[k]){ groups[k] = []; ord.push(k); } groups[k].push(f); });
+    ord.forEach(function(k){
+      box.appendChild(el("div", "grpn", k));
+      groups[k].forEach(function(f){
+        var lb = el("label", "pick"), cb = el("input"); cb.type = "checkbox"; cb.value = f.id;
+        var tx = el("span"); tx.appendChild(document.createTextNode(f.nome || "Sem nome"));
+        tx.appendChild(el("small", "", "Vida " + (num(f.hp) === null ? "—" : num(f.hp)) + "/" + (num(f.hpm) || "—")));
+        var av = el("span", "av");
+        if(f.portrait){ var im = el("img"); im.src = f.portrait; im.alt = ""; av.appendChild(im); } else { av.textContent = initials(f.nome); }
+        lb.appendChild(cb); lb.appendChild(av); lb.appendChild(tx);
+        box.appendChild(lb);
+      });
+    });
+    $("dlg-ok").disabled = !free.length;
+    if(dlg.showModal){ dlg.showModal(); } else { dlg.setAttribute("open", ""); }
+  });
+  function closeDlg(){ if(dlg.close){ dlg.close(); } else { dlg.removeAttribute("open"); } }
+  $("dlg-cancel").addEventListener("click", closeDlg);
+  $("dlg-ok").addEventListener("click", function(){
+    var n = 0;
+    document.querySelectorAll("#dlg-list input:checked").forEach(function(cb){
+      if(part(cb.value)){ return; }
+      var c = freeCell(); C.parts.push({id: cb.value, ini: null, x: c.x, y: c.y}); syncInfo(cb.value); n++;
+    });
+    closeDlg(); persist(); render();
+    if(n){ say(n + (n === 1 ? " ficha adicionada." : " fichas adicionadas.") + " Arraste no tabuleiro para posicionar.", "ok"); }
+  });
+
+  /* ---- Mestre: iniciar e encerrar ---- */
+  $("start").addEventListener("click", function(){
+    if(!C.parts.length){ return; }
+    var when = new Date().toISOString(), st = {round:C.round, turn:C.turn, parts:C.parts, info:C.info};
+    $("start").disabled = true;
+    lastSent = JSON.stringify(st);
+    sb.from("combate").update({ativo: true, iniciado_em: when, estado: st}).eq("id", 1).then(function(r){
+      if(r.error){ say("Erro ao iniciar: " + r.error.message, "err"); render(); return; }
+      ROW.ativo = true; ROW.iniciado_em = when;
+      try { localStorage.setItem(SEEN, when); } catch(e){}   // o mestre não recebe o próprio aviso
+      say("Combate iniciado! Os jogadores foram avisados.", "ok");
+      render(); dcSchedule(true);
+    });
+  });
+  $("end").addEventListener("click", function(){
+    if(!confirm("Encerrar o combate? O tabuleiro, as iniciativas e a rodada serão limpos. As fichas não mudam.")){ return; }
+    var last = {round: C.round, active: ROW.ativo};
+    C = blank(); sel = null; movedLocal = {};
+    lastSent = JSON.stringify(C);
+    sb.from("combate").update({ativo: false, iniciado_em: null, estado: C}).eq("id", 1).then(function(r){
+      if(r.error){ say("Erro ao encerrar: " + r.error.message, "err"); return; }
+      if(last.active){ dcFinish(last.round); }
+      ROW.ativo = false; ROW.iniciado_em = null; render(); say("Combate encerrado.");
+    });
+  });
+
+  /* =====================================================================
+     Discord: uma mensagem com o tabuleiro, editada a cada mudança
+     ===================================================================== */
+  var DCKEY = "wanted-warriors-combate-discord", DCMSG = "wanted-warriors-combate-discord-msg";
+  var DC_URL = "", dcMsg = {url:"", id:"", combat:""}, dcT = null, dcBusy = false, dcAgain = false, dcLast = "";
+  try {
+    DC_URL = localStorage.getItem(DCKEY) || "";
+    var dm0 = JSON.parse(localStorage.getItem(DCMSG) || "null"); if(dm0){ dcMsg = dm0; }
+  } catch(e){}
+  function dcSay(t, c){ var e = $("dc-st"); e.textContent = t; e.className = "st" + (c ? " " + c : ""); }
+  function dcCheck(v){
+    if(!v){ return "Cole a URL do webhook."; }
+    if(!/^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w\-]+\/?$/i.test(v)){
+      return "Essa não parece uma URL de webhook do Discord (https://discord.com/api/webhooks/número/token).";
+    }
+    return "";
+  }
+  function dcBase(){ return DC_URL.replace(/\/$/, ""); }
+  function dcErr(st, body){
+    var j = {}; try { j = JSON.parse(body); } catch(e){}
+    var det = j.message ? " (" + j.message + ")" : "";
+    if(st === 401 || st === 404){ return "o Discord não encontrou o webhook: ele foi excluído ou a URL está errada" + det + "."; }
+    if(st === 429){ return "muitas atualizações seguidas; o Discord pediu para esperar um pouco."; }
+    if(st === 413){ return "a imagem ficou grande demais."; }
+    return "erro " + st + det + ".";
+  }
+  function dcSyncBtn(){ $("dc-btn").classList.toggle("on", !!DC_URL); }
+  function dcIdle(){
+    if(!DC_URL){ dcSay("Cole a URL de um webhook do canal do combate. Fica salva só neste navegador."); }
+    else if(!ROW.ativo){ dcSay("Webhook salvo. A mensagem é criada quando você clicar em “Iniciar combate”.", "ok"); }
+    else { dcSay("Webhook salvo. A mensagem do combate é atualizada a cada mudança.", "ok"); }
+  }
+
+  /* desenho do tabuleiro em PNG */
+  var imgCache = {};
+  function loadImg(src){
+    if(!src){ return Promise.resolve(null); }
+    if(imgCache[src]){ return imgCache[src]; }
+    imgCache[src] = new Promise(function(ok){ var im = new Image(); im.onload = function(){ ok(im); }; im.onerror = function(){ ok(null); }; im.src = src; });
+    return imgCache[src];
+  }
+  /* Enquadra só a região com peças (mais uma margem), para as peças aparecerem grandes no Discord */
+  function frame(){
+    var MIN = 12, M = 3;
+    if(!C.parts.length){ return {x0:0, y0:0, n:N}; }
+    var xs = C.parts.map(function(p){ return p.x; }), ys = C.parts.map(function(p){ return p.y; });
+    var x0 = Math.min.apply(null, xs) - M, x1 = Math.max.apply(null, xs) + M;
+    var y0 = Math.min.apply(null, ys) - M, y1 = Math.max.apply(null, ys) + M;
+    var n = Math.min(N, Math.max(MIN, x1 - x0 + 1, y1 - y0 + 1));
+    function fit(a, b){   // centraliza a faixa [a,b] num lado de n casas, sem sair do tabuleiro
+      var s = Math.round((a + b) / 2 - (n - 1) / 2);
+      return Math.max(0, Math.min(N - n, s));
+    }
+    return {x0: fit(x0, x1), y0: fit(y0, y1), n: n};
+  }
+  function drawBoard(){
+    var fr = frame(), n = fr.n, CELL = Math.max(26, Math.min(56, Math.floor(860 / n))), PAD = 24, W = n * CELL + PAD * 2;
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = W;
+    var g = cv.getContext("2d");
+    var K = {bg:"#0e1a26", panel:"#152636", grid:"#3a5168", ink:"#e6edf2", muted:"#93a5b4", sea:"#58b4d1", gold:"#d9a846"};
+    g.fillStyle = K.bg; g.fillRect(0, 0, W, W);
+    g.fillStyle = K.panel; g.fillRect(PAD, PAD, n * CELL, n * CELL);
+    g.strokeStyle = K.grid; g.lineWidth = 1;
+    for(var i = 0; i <= n; i++){
+      g.beginPath(); g.moveTo(PAD + i * CELL + .5, PAD); g.lineTo(PAD + i * CELL + .5, PAD + n * CELL); g.stroke();
+      g.beginPath(); g.moveTo(PAD, PAD + i * CELL + .5); g.lineTo(PAD + n * CELL, PAD + i * CELL + .5); g.stroke();
+    }
+    // números das colunas e linhas (os mesmos do tabuleiro completo)
+    var every = CELL >= 34 ? 1 : 5;
+    g.fillStyle = K.muted; g.font = "11px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    for(var j = 0; j < n; j++){
+      if((fr.x0 + j + 1) % every === 0 || every === 1){ g.fillText(String(fr.x0 + j + 1), PAD + j * CELL + CELL / 2, PAD / 2); }
+      if((fr.y0 + j + 1) % every === 0 || every === 1){ g.fillText(String(fr.y0 + j + 1), PAD / 2, PAD + j * CELL + CELL / 2); }
+    }
+    return Promise.all(C.parts.map(function(p){ return loadImg(info(p.id).thumb); })).then(function(imgs){
+      C.parts.forEach(function(p, k){
+        var i = info(p.id), cx = PAD + (p.x - fr.x0) * CELL + CELL / 2, cy = PAD + (p.y - fr.y0) * CELL + CELL / 2, r = CELL / 2 - 3;
+        var cur = p.id === C.turn, down = i.hp === 0;
+        g.save();
+        if(down){ g.globalAlpha = .55; }
+        g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.closePath();
+        g.fillStyle = K.bg; g.fill();
+        g.save(); g.clip();
+        if(imgs[k]){ g.drawImage(imgs[k], cx - r, cy - r, r * 2, r * 2); }
+        else { g.fillStyle = K.ink; g.font = "bold " + Math.round(CELL * .36) + "px sans-serif"; g.fillText(initials(i.nome), cx, cy + 1); }
+        g.restore();
+        g.lineWidth = cur ? 3 : 2; g.strokeStyle = cur ? K.gold : K.sea;
+        g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.stroke();
+        if(cur){ g.lineWidth = 2; g.beginPath(); g.arc(cx, cy, r + 3, 0, Math.PI * 2); g.stroke(); }
+        g.restore();
+      });
+      return new Promise(function(ok){ cv.toBlob(function(b){ ok(b); }, "image/png"); });
+    });
+  }
+  function dcPayload(){
+    var o = order(), cur = C.turn ? info(C.turn) : null;
+    var content = cur ? "⚔️ **Rodada " + C.round + "** · vez de **" + cur.nome + "**"
+                      : "⚔️ **Combate iniciado!** Aguardando o primeiro turno.";
+    var lines = o.map(function(p){
+      var i = info(p.id), mark = p.id === C.turn ? "▶️" : "▫️";
+      var hp = i.hp === null || i.hp === undefined ? "—" : i.hp;
+      return mark + " **" + i.nome + "** · inic. " + (p.ini === null ? "—" : p.ini) + " · ❤️ " + hp + "/" + (i.hpm || "—") + (i.hp === 0 ? " 💀" : "");
+    });
+    return {
+      content: content,
+      allowed_mentions: {parse: []},
+      embeds: [{
+        title: "Ordem de iniciativa",
+        description: (lines.join("\n") || "Ninguém no combate.").slice(0, 3900),
+        color: 0xd9a846,
+        image: {url: "attachment://tabuleiro.png"}
+      }],
+      /* Botão "Próximo turno": só aparece quando o webhook foi criado pelo bot
+         (veja o LEIAME). Em webhook comum o Discord simplesmente ignora. */
+      components: [{type: 1, components: [{type: 2, style: 1, label: "Próximo turno ▶", custom_id: "ww_next"}]}],
+      attachments: [{id: 0, filename: "tabuleiro.png"}]
+    };
+  }
+  function dcRequest(method, url, payload, blob){
+    var fd = new FormData();
+    fd.append("payload_json", JSON.stringify(payload));
+    if(blob){ fd.append("files[0]", blob, "tabuleiro.png"); }
+    var p;
+    try { p = fetch(url, {method: method, body: fd}); }
+    catch(e){ return Promise.reject(new Error("sem conexão com o Discord.")); }
+    return p.then(function(r){
+      if(r.ok){ return r.json().catch(function(){ return null; }); }
+      return r.text().then(function(b){ var e = new Error(dcErr(r.status, b)); e.status = r.status; throw e; });
+    }, function(){ throw new Error("sem conexão com o Discord (internet, bloqueador ou rede da página)."); });
+  }
+  function dcSchedule(now){
+    if(!DC_URL || !ROW.ativo || !me || !me.master){ return; }
+    clearTimeout(dcT); dcT = setTimeout(dcSync, now ? 0 : 1500);
+  }
+  function dcSync(){
+    if(!DC_URL || !ROW.ativo){ return Promise.resolve(); }
+    if(dcBusy){ dcAgain = true; return Promise.resolve(); }
+    var payload = dcPayload();
+    var sig = JSON.stringify([payload, C.parts, Object.keys(C.info).map(function(k){ return C.info[k].pk || ""; })]);
+    var same = dcMsg.id && dcMsg.url === DC_URL && dcMsg.combat === ROW.iniciado_em;
+    if(same && sig === dcLast){ return Promise.resolve(); }
+    dcBusy = true; dcSay("Atualizando a mensagem no Discord…");
+    var combat = ROW.iniciado_em;
+    return drawBoard().then(function(blob){
+      function create(){
+        return dcRequest("POST", dcBase() + "?wait=true", payload, blob).then(function(m){
+          dcMsg = {url: DC_URL, id: m && m.id || "", combat: combat};
+          try { localStorage.setItem(DCMSG, JSON.stringify(dcMsg)); } catch(e){}
+        });
+      }
+      if(!same){ return create(); }
+      return dcRequest("PATCH", dcBase() + "/messages/" + dcMsg.id, payload, blob).catch(function(e){
+        if(e.status === 404){ return create(); }   // mensagem apagada no canal: cria outra
+        throw e;
+      });
+    }).then(function(){
+      dcLast = sig;
+      var d = new Date(), z = function(n){ return (n < 10 ? "0" : "") + n; };
+      dcSay("Discord atualizado às " + z(d.getHours()) + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds()) + ".", "ok");
+    }).catch(function(e){
+      dcSay("Falha ao atualizar o Discord: " + e.message, "err");
+    }).then(function(){
+      dcBusy = false;
+      if(dcAgain){ dcAgain = false; dcSchedule(); }
+    });
+  }
+  function dcFinish(round){
+    if(!DC_URL || !dcMsg.id || dcMsg.url !== DC_URL){ return; }
+    clearTimeout(dcT);
+    var payload = {content: "🏁 **Combate encerrado** na rodada " + round + ".", allowed_mentions: {parse: []}, embeds: [], attachments: []};
+    dcRequest("PATCH", dcBase() + "/messages/" + dcMsg.id, payload, null)
+      .then(function(){ dcSay("Mensagem do Discord marcada como encerrada.", "ok"); })
+      .catch(function(e){ dcSay("Falha ao atualizar o Discord: " + e.message, "err"); });
+    dcMsg = {url:"", id:"", combat:""}; dcLast = "";
+    try { localStorage.removeItem(DCMSG); } catch(e){}
+  }
+  $("dc-btn").addEventListener("click", function(){
+    var pn = $("dc-panel"); pn.hidden = !pn.hidden; $("dc-btn").setAttribute("aria-expanded", String(!pn.hidden));
+    if(!pn.hidden){ dcIdle(); $("dc-url").focus(); }
+  });
+  $("dc-save").addEventListener("click", function(){
+    var v = $("dc-url").value.trim(), er = dcCheck(v);
+    if(er){ dcSay(er, "err"); return; }
+    DC_URL = v; try { localStorage.setItem(DCKEY, v); } catch(e){}
+    dcSyncBtn(); dcIdle(); dcSchedule(true);
+  });
+  $("dc-send").addEventListener("click", function(){
+    if(!DC_URL){ dcSay("Salve a URL do webhook primeiro.", "err"); return; }
+    if(!ROW.ativo){ dcSay("Inicie o combate para criar a mensagem no Discord.", "err"); return; }
+    dcLast = ""; dcSync();
+  });
+  $("dc-clear").addEventListener("click", function(){
+    DC_URL = ""; $("dc-url").value = ""; dcMsg = {url:"", id:"", combat:""}; dcLast = "";
+    try { localStorage.setItem(DCKEY, ""); localStorage.removeItem(DCMSG); } catch(e){}
+    dcSyncBtn(); dcIdle();
+  });
+
+  /* ---- Início ---- */
+  sb.auth.getSession().then(function(r){
+    var s = r.data.session;
+    if(!s){ location.replace("index.html"); return null; }
+    return sb.from("profiles").select("role").eq("id", s.user.id).maybeSingle().then(function(p){
+      me = {id: s.user.id, master: !!(p.data && p.data.role === "mestre")};
+      return fetchRow();
+    });
+  }).then(function(row){
+    if(!me){ return; }
+    if(!row){ throw new Error("a tabela do combate não existe. Rode o arquivo combate.sql no SQL Editor do Supabase (veja o LEIAME)."); }
+    document.querySelectorAll(".m-only").forEach(function(e){ if(!me.master){ e.remove(); } });
+    setZoom(zoom);
+    ROW.ativo = !!row.ativo; ROW.iniciado_em = row.iniciado_em || null;
+    C = normalize(row.estado);
+    if(!me.master){
+      if(!ROW.ativo){ C = blank(); }
+      else if(ROW.iniciado_em){ try { localStorage.setItem(SEEN, ROW.iniciado_em); } catch(e){} }
+      return;
+    }
+    // mestre: aproveita um combate montado na versão anterior (salvo só no navegador)
+    if(!C.parts.length){
+      try {
+        var old = JSON.parse(localStorage.getItem(OLDKEY) || "null");
+        if(old && Array.isArray(old.parts) && old.parts.length){ C = normalize(old); persist(); }
+        localStorage.removeItem(OLDKEY);
+      } catch(e){}
+    }
+    $("dc-url").value = DC_URL; dcSyncBtn();
+    return loadAll().then(function(){ if(C.parts.length){ persist(); } stamp(); });
+  }).then(function(){
+    if(!me){ return; }
+    $("boot").hidden = true; $("main").hidden = false;
+    render();
+    // tempo real: combate (todos) e fichas (mestre)
+    try {
+      var ch = sb.channel("combate-" + me.id).on("postgres_changes", {event: "UPDATE", schema: "public", table: "combate"}, function(p){ onRow(p.new); });
+      if(me.master){
+        ch = ch.on("postgres_changes", {event: "UPDATE", schema: "public", table: "fichas"}, function(){
+          clearTimeout(window.__wwRt); window.__wwRt = setTimeout(refreshStats, 400);
+        });
+      }
+      ch.subscribe();
+    } catch(e){}
+    // reforço caso o tempo real esteja desligado
+    setInterval(function(){
+      if(document.visibilityState !== "visible"){ return; }
+      if(me.master){ refreshStats(); fetchRow().then(onRow).catch(function(){}); }
+      else { fetchRow().then(onRow).catch(function(){}); }
+    }, me.master ? 10000 : 4000);
+  }).catch(function(e){
+    var m = (e && e.message || String(e));
+    if(/combate/.test(m) && /(does not exist|not find|schema cache)/i.test(m)){ m = "a tabela do combate não existe. Rode o arquivo combate.sql no SQL Editor do Supabase (veja o LEIAME)."; }
+    boot("", "Não foi possível abrir o combate: " + m.replace(/</g, "&lt;") + '<br><br><a href="index.html">← Voltar para as fichas</a>');
+  });
+})();
+</script>
+</body>
+</html>

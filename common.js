@@ -1,4 +1,4 @@
-/* Cria o cliente do Supabase, usado por index.html e ficha.html. */
+/* Cria o cliente do Supabase, usado por index.html, ficha.html e combate.html. */
 (function(){
   var c = window.WW_CONFIG;
   if(!c || !c.SUPABASE_URL || c.SUPABASE_URL.indexOf("COLE_AQUI") === 0 || !c.SUPABASE_ANON_KEY || c.SUPABASE_ANON_KEY.indexOf("COLE_AQUI") === 0){
@@ -6,4 +6,75 @@
   }
   if(!window.supabase){ window.WW_MISSING = true; window.WW_NOLIB = true; return; }
   window.sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_ANON_KEY);
+})();
+
+/* Aviso de combate: quando o mestre inicia um combate, aparece um pop-up
+   em qualquer página do site (menos na própria página do combate). */
+(function(){
+  var sb = window.sb;
+  if(!sb || /combate(\.html)?$/i.test(location.pathname)){ return; }
+  var SEEN = "wanted-warriors-combate-visto", shown = "", box = null, started = false, pollT = null;
+  function seen(){ try { return localStorage.getItem(SEEN) || ""; } catch(e){ return ""; } }
+  function markSeen(v){ try { localStorage.setItem(SEEN, v); } catch(e){} }
+
+  function style(){
+    if(document.getElementById("ww-cb-style")){ return; }
+    var s = document.createElement("style"); s.id = "ww-cb-style";
+    s.textContent =
+      ".ww-cb{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.55)}" +
+      ".ww-cb-box{width:min(440px,100%);background:var(--panel,#152636);color:var(--ink,#e6edf2);border:2px solid var(--gold,#d9a846);padding:22px 22px 18px;box-shadow:0 10px 40px rgba(0,0,0,.5);text-align:center;font-family:'Alegreya Sans',system-ui,sans-serif}" +
+      ".ww-cb-box h2{font-family:'Pirata One',Georgia,serif;font-weight:400;font-size:1.9rem;line-height:1.1;margin:0 0 6px;color:var(--gold,#d9a846)}" +
+      ".ww-cb-box p{margin:0 0 18px;color:var(--muted,#93a5b4)}" +
+      ".ww-cb-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}" +
+      ".ww-cb-go{font:inherit;font-weight:700;padding:8px 20px;background:var(--gold,#d9a846);color:#14283b;border:2px solid var(--gold,#d9a846);text-decoration:none;cursor:pointer}" +
+      ".ww-cb-go:hover{filter:brightness(1.1)}" +
+      ".ww-cb-no{font:inherit;padding:8px 16px;background:none;color:var(--muted,#93a5b4);border:1px solid var(--line,#2c4256);cursor:pointer}" +
+      ".ww-cb-no:hover{color:var(--ink,#e6edf2);border-color:var(--ink,#e6edf2)}" +
+      ".ww-cb a:focus-visible,.ww-cb button:focus-visible{outline:2px solid var(--sea,#58b4d1);outline-offset:2px}";
+    document.head.appendChild(s);
+  }
+  function close(){ if(box){ box.remove(); box = null; } document.removeEventListener("keydown", onKey); }
+  function onKey(ev){ if(ev.key === "Escape"){ markSeen(shown); close(); } }
+  function show(row){
+    shown = row.iniciado_em; style(); close();
+    box = document.createElement("div"); box.className = "ww-cb";
+    box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); box.setAttribute("aria-labelledby", "ww-cb-t");
+    var d = document.createElement("div"); d.className = "ww-cb-box";
+    var h = document.createElement("h2"); h.id = "ww-cb-t"; h.textContent = "⚔ Combate iniciado!";
+    var p = document.createElement("p"); p.textContent = "O mestre começou um combate. Entre para ver o tabuleiro e a ordem de iniciativa.";
+    var r = document.createElement("div"); r.className = "ww-cb-row";
+    var go = document.createElement("a"); go.className = "ww-cb-go"; go.href = "combate.html"; go.textContent = "Ir para o combate";
+    go.addEventListener("click", function(){ markSeen(shown); });
+    var no = document.createElement("button"); no.type = "button"; no.className = "ww-cb-no"; no.textContent = "Agora não";
+    no.addEventListener("click", function(){ markSeen(shown); close(); });
+    r.appendChild(go); r.appendChild(no);
+    d.appendChild(h); d.appendChild(p); d.appendChild(r); box.appendChild(d);
+    document.body.appendChild(box);
+    document.addEventListener("keydown", onKey);
+    go.focus();
+  }
+  function check(row){
+    if(!row){ return; }
+    if(!row.ativo){ if(box){ close(); } return; }   // combate encerrado: some o aviso
+    if(!row.iniciado_em || row.iniciado_em === seen() || row.iniciado_em === shown){ return; }
+    show(row);
+  }
+  function fetchRow(){
+    sb.from("combate").select("ativo,iniciado_em").eq("id", 1).maybeSingle().then(function(r){
+      if(!r.error){ check(r.data); }   // sem a tabela (combate.sql não rodado): fica quieto
+    });
+  }
+  function start(){
+    if(started){ return; } started = true;
+    fetchRow();
+    try {
+      sb.channel("combate-aviso").on("postgres_changes", {event: "UPDATE", schema: "public", table: "combate"}, function(p){
+        check(p.new);
+      }).subscribe();
+    } catch(e){}
+    // reforço caso o tempo real esteja desligado
+    pollT = setInterval(function(){ if(document.visibilityState === "visible"){ fetchRow(); } }, 15000);
+  }
+  sb.auth.getSession().then(function(r){ if(r.data.session){ start(); } });
+  sb.auth.onAuthStateChange(function(ev, s){ if(s){ setTimeout(start, 0); } });
 })();

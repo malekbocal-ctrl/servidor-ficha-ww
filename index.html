@@ -62,6 +62,9 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
 .stat.low{color:var(--red)}
 .stat small{font-weight:400;color:var(--muted);margin-right:4px}
 .tabs{display:flex;gap:8px;margin-bottom:6px}
+h2.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+h2.hrow .btn{font-family:"Alegreya Sans",system-ui,sans-serif;font-size:1rem;color:var(--gold);border-color:var(--gold)}
+h2.hrow .btn:hover{background:var(--gold);color:var(--panel)}
 </style>
 </head>
 <body>
@@ -94,7 +97,7 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
     <div class="row"><button id="new" class="pri" type="button">+ Nova ficha</button></div>
     <div id="amsg" class="msg" role="status" aria-live="polite"></div>
     <div id="all-wrap" hidden>
-      <h2 class="s">Fichas dos jogadores</h2>
+      <h2 class="s hrow"><span>Fichas dos jogadores</span><a class="btn" href="combate.html">⚔ Montar combate</a></h2>
       <div id="all"></div>
     </div>
   </section>

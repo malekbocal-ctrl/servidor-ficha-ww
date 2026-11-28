@@ -227,41 +227,112 @@ function mkActRow(it){
 }
 function actMax(k){ return S.act[k + "Max"]; }
 function actUsed(k){ return Math.min(S.act[k + "Used"] || 0, actMax(k)); }
+var ACT_TXT = {pad:"padrão", mov:"de movimento"}, actHist = [], dmHome = null, dmNext = null;
+function spendAct(k){
+  if(actMax(k) - actUsed(k) <= 0){ toast("Sem ações " + ACT_TXT[k] + " restantes neste turno."); return; }
+  S.act[k + "Used"] = actUsed(k) + 1; actHist.push(k); show();
+}
+function newTurn(){ S.act.padUsed = 0; S.act.movUsed = 0; actHist = []; show(); }
+function moveDM(){
+  var b = $id("dm"), slot = $id("ses-dm-slot"); if(!b || !slot){ return; }
+  if(!dmHome){ dmHome = b.parentNode; dmNext = b.nextSibling; }
+  if(isPlay()){ slot.appendChild(b); } else { dmHome.insertBefore(b, dmNext); }
+}
+function quickAdj(which, sign){
+  var s = which === "hp" ? hp : est, inp = $id("ses-" + which + "v"), v = parseInt(inp.value, 10);
+  if(isNaN(v) || v <= 0){ inp.focus(); return; }
+  s.value = Math.max(0, Math.min(+s.max, +s.value + sign * v)); inp.value = ""; show();
+}
 function buildActs(){
-  [["pad", "padrão"], ["mov", "de movimento"]].forEach(function(x){
-    var k = x[0], box = $id("ctr-" + k); if(!box){ return; }
-    var pips = el("span", "pips"); pips.setAttribute("aria-hidden", "true");
-    var n = el("b", "ctr-n"); n.setAttribute("aria-live", "polite");
-    var sp = el("button", "act-btn"); sp.type = "button"; sp.textContent = "Gastar";
-    var bk = el("button", "mini"); bk.type = "button"; bk.textContent = "Devolver";
-    var mx = el("span", "ctr-max"), mn = el("button", "mini stp"), pl = el("button", "mini stp"), mv = el("b");
-    mn.type = "button"; mn.textContent = "−"; mn.setAttribute("aria-label", "Diminuir o máximo de ações " + x[1]);
-    pl.type = "button"; pl.textContent = "+"; pl.setAttribute("aria-label", "Aumentar o máximo de ações " + x[1]);
-    mx.appendChild(document.createTextNode("máx.")); mx.appendChild(mn); mx.appendChild(mv); mx.appendChild(pl);
-    box.appendChild(n); box.appendChild(pips); box.appendChild(sp); box.appendChild(bk); box.appendChild(mx);
-    sp.addEventListener("click", function(){
-      if(actMax(k) - actUsed(k) <= 0){ toast("Sem ações " + x[1] + " restantes neste turno."); return; }
-      S.act[k + "Used"] = actUsed(k) + 1; show();
-    });
-    bk.addEventListener("click", function(){ if(actUsed(k) > 0){ S.act[k + "Used"] = actUsed(k) - 1; show(); } });
-    mn.addEventListener("click", function(){ S.act[k + "Max"] = Math.max(0, actMax(k) - 1); S.act[k + "Used"] = actUsed(k); show(); });
-    pl.addEventListener("click", function(){ S.act[k + "Max"] = Math.min(9, actMax(k) + 1); show(); });
-    actReg[k] = {pips:pips, n:n, sp:sp, bk:bk, mv:mv, mn:mn, pl:pl};
+  var cfg = $id("act-cfg");
+  [["pad", "Ações padrão"], ["mov", "Ações de movimento"]].forEach(function(x){
+    var k = x[0], hx = $id("hx-" + k); if(!hx || !cfg){ return; }
+    hx.addEventListener("click", function(){ spendAct(k); });
+    var row = el("span", "acfg-row"), lb = el("span"), mn = el("button", "mini stp"), v = el("b"), pl = el("button", "mini stp");
+    lb.textContent = x[1] + " por turno:";
+    mn.type = "button"; mn.textContent = "−"; mn.setAttribute("aria-label", "Diminuir " + x[1].toLowerCase() + " por turno");
+    pl.type = "button"; pl.textContent = "+"; pl.setAttribute("aria-label", "Aumentar " + x[1].toLowerCase() + " por turno");
+    row.appendChild(lb); row.appendChild(mn); row.appendChild(v); row.appendChild(pl);
+    cfg.appendChild(row);
+    /* Os mesmos controles também ficam embaixo do hexágono, no modo sessão */
+    var adj = el("span", "hxadj"), smn = el("button", "mini"), spl = el("button", "mini");
+    smn.type = "button"; smn.textContent = "−"; smn.title = "Diminuir " + x[1].toLowerCase() + " por turno"; smn.setAttribute("aria-label", smn.title);
+    spl.type = "button"; spl.textContent = "+"; spl.title = "Aumentar " + x[1].toLowerCase() + " por turno"; spl.setAttribute("aria-label", spl.title);
+    adj.appendChild(smn); adj.appendChild(spl); $id("hxc-" + k).appendChild(adj);
+    function dec(){ S.act[k + "Max"] = Math.max(0, actMax(k) - 1); S.act[k + "Used"] = actUsed(k); show(); }
+    function inc(){ S.act[k + "Max"] = Math.min(9, actMax(k) + 1); show(); }
+    mn.addEventListener("click", dec); smn.addEventListener("click", dec);
+    pl.addEventListener("click", inc); spl.addEventListener("click", inc);
+    actReg[k] = {hx:hx, n:hx.querySelector("small"), v:v, mn:mn, pl:pl, smn:smn, spl:spl};
   });
-  $id("new-turn").addEventListener("click", function(){ S.act.padUsed = 0; S.act.movUsed = 0; show(); });
+  $id("new-turn").addEventListener("click", newTurn);
+  $id("undo-act").addEventListener("click", function(){
+    var k = actHist.pop();
+    if(k && actUsed(k) > 0){ S.act[k + "Used"] = actUsed(k) - 1; }
+    show();
+  });
   $id("play-reset-uses").addEventListener("click", function(){ resetUses(["ativas"]); show(); });
-  document.addEventListener("ww-mode", function(){ renderAll(); refreshUI(); rollAtkLabels(); });
+  document.querySelectorAll("#session [data-q]").forEach(function(b){
+    b.addEventListener("click", function(){ quickAdj(b.getAttribute("data-q"), +b.getAttribute("data-s")); });
+  });
+  [["ses-hpv", "hp", -1], ["ses-estv", "est", -1]].forEach(function(x){
+    $id(x[0]).addEventListener("keydown", function(ev){ if(ev.key === "Enter"){ ev.preventDefault(); quickAdj(x[1], x[2]); } });
+  });
+  document.addEventListener("keydown", function(ev){
+    if(!isPlay() || ev.ctrlKey || ev.metaKey || ev.altKey){ return; }
+    var t = ev.target;
+    if(t && (t.isContentEditable || /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName))){ return; }
+    var key = (ev.key || "").toLowerCase();
+    if(key === "n"){ newTurn(); }
+    else if(key === "1"){ spendAct("pad"); }
+    else if(key === "2"){ spendAct("mov"); }
+    else if(key === "d"){ $id("ses-hpv").focus(); }
+    else { return; }
+    ev.preventDefault();
+  });
+  document.addEventListener("ww-mode", function(){ moveDM(); renderAll(); refreshUI(); rollAtkLabels(); });
 }
 function updActs(){
   ["pad", "mov"].forEach(function(k){
     var r = actReg[k]; if(!r){ return; }
-    var max = actMax(k), used = actUsed(k), rem = Math.max(0, max - used);
-    r.n.textContent = rem + "/" + max; r.mv.textContent = max;
-    r.pips.textContent = "";
-    for(var i = 0; i < max; i++){ r.pips.appendChild(el("span", "pip" + (i < rem ? " on" : ""))); }
-    r.sp.disabled = rem <= 0; r.bk.disabled = used <= 0;
-    r.mn.disabled = max <= 0; r.pl.disabled = max >= 9;
+    var max = actMax(k), rem = Math.max(0, max - actUsed(k));
+    r.n.textContent = rem + "/" + max; r.v.textContent = max;
+    r.hx.classList.toggle("out", rem <= 0);
+    r.hx.setAttribute("aria-label", "Ações " + ACT_TXT[k] + ": " + rem + " de " + max + " restantes. Clique para gastar uma.");
+    r.mn.disabled = r.smn.disabled = max <= 0; r.pl.disabled = r.spl.disabled = max >= 9;
   });
+  var u = $id("undo-act"); if(u){ u.disabled = !actHist.length; }
+}
+function updSession(){
+  if(!$id("session") || !isPlay()){ return; }
+  var A = effAttrs();
+  $id("ses-name").textContent = charName();
+  $id("ses-awake").hidden = !awakened;
+  [[hp, "hp"], [est, "est"]].forEach(function(g){
+    var s = g[0], m = +s.max;
+    $id("ses-" + g[1]).textContent = s.value;
+    $id("ses-" + g[1] + "m").textContent = s.max;
+    $id("ses-" + g[1] + "b").style.width = (m > 0 ? 100 * s.value / m : 0) + "%";
+  });
+  var kv = $id("ses-kv"); kv.textContent = "";
+  [["Deslocamento", 5 + A.agi], ["Esquiva", 5 + A.agi + BONUS.esqv], ["CC", fmtMod(atkMod("CC"))],
+   ["CD", fmtMod(atkMod("CD"))], ["Freestyle", fmtMod(atkMod("FS"))], ["Técnica", fmtMod(atkMod("TC"))]].forEach(function(x){
+    var d = el("div"), s = el("span"), b = el("b");
+    s.textContent = x[0]; b.textContent = x[1];
+    d.appendChild(s); d.appendChild(b); kv.appendChild(d);
+  });
+}
+function placeSession(){
+  var spent = $id("grp-spent"); if(!spent){ return; }
+  var list = reg.filter(function(r){ return r.sec !== "passivas"; }), moved = false;
+  list.forEach(function(r){
+    r.dest = (!r.u.hidden && r.u.disabled) ? spent : rootFor(r.sec, r.it);
+    if(r.d.parentNode !== r.dest){ moved = true; }
+  });
+  if(moved){ list.forEach(function(r){ r.dest.appendChild(r.d); }); }
+  var n = spent.children.length;
+  $id("spent-n").textContent = n; $id("spent-box").hidden = n === 0;
+  $id("pas-n").textContent = S.passivas.length; $id("pas-box").hidden = !S.passivas.length;
 }
 function dmOwned(){ return (S.apt["Duro de Matar"] || 0) + freeApt("Duro de Matar"); }
 function updDM(){
@@ -470,20 +541,27 @@ function refreshUI(){
   document.body.classList.toggle("awake", awakened);
   document.getElementById("awake-tag").hidden = !awakened;
   document.getElementById("add-despertar").hidden = S.despertar.length > 0;
+  var pl = isPlay();
   reg.forEach(function(r){
-    var it = r.it, u = r.u, e = costEst(it.c), x = costUses(it.c);
+    var it = r.it, u = r.u, e = costEst(it.c), x = costUses(it.c), chip = "";
     u.classList.remove("on");
     if(r.sec === "despertar"){
       u.hidden = false; u.textContent = awakened ? "Encerrar" : "Despertar";
       u.classList.toggle("on", awakened);
       u.disabled = !awakened && +est.value < (e || 0);
+      chip = e ? e + " EST" : "";
     } else if(e !== null){
       u.hidden = false; u.textContent = "Usar"; u.disabled = +est.value < e;
+      chip = e + " EST";
     } else if(x !== null){
       if(uses[it.id] === undefined || uses[it.id] > x){ uses[it.id] = x; }
-      u.hidden = false; u.textContent = "Usar (" + uses[it.id] + "/" + x + ")"; u.disabled = uses[it.id] <= 0;
-    } else { u.hidden = true; }
+      u.hidden = false; u.textContent = pl ? "Usar" : "Usar (" + uses[it.id] + "/" + x + ")"; u.disabled = uses[it.id] <= 0;
+      chip = "Usos " + uses[it.id] + "/" + x;
+    } else { u.hidden = true; chip = (it.c || "").trim(); }
+    if(r.ch.textContent !== chip){ r.ch.textContent = chip; }
+    r.ch.hidden = !chip;
   });
+  if(pl){ placeSession(); updSession(); }
 }
 
 var ICON_D20 = '<svg class="ico-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L21 7V17L12 22L3 17V7Z"/><path d="M12 7L17 15H7Z"/><path d="M12 2V7M21 7L17 15M3 7L7 15M12 22V15M21 17L17 15M3 17L7 15"/></svg>';
@@ -611,14 +689,15 @@ function mkItem(sec, it){
     if(sec === "despertar"){ awakened = false; stopAwakeMusic(); }
     renderAll(); show();
   });
-  h.appendChild(nm); h.appendChild(cs); h.appendChild(u); h.appendChild(ex); h.appendChild(dl);
+  var ch = el("span", "chip"); ch.hidden = true;
+  h.appendChild(nm); h.appendChild(cs); h.appendChild(ch); h.appendChild(u); h.appendChild(ex); h.appendChild(dl);
   var w = el("div", "desc"), i = el("div");
   var p = makeEditable(el("p"), "descrição", function(v){ it.d = v; if(sec === "despertar"){ refreshUI(); } save(); });
   p.classList.remove("ed"); p.textContent = it.d;
   if(sec !== "passivas"){ i.appendChild(mkActRow(it)); }
   i.appendChild(p); w.appendChild(i);
   d.appendChild(h); d.appendChild(w);
-  reg.push({sec:sec, it:it, u:u});
+  reg.push({sec:sec, it:it, u:u, ch:ch, d:d});
   return d;
 }
 
@@ -815,19 +894,24 @@ function mkAttack(it){
 }
 
 function rootFor(sec, it){
-  if(document.body.classList.contains("play") && sec !== "passivas"){
+  if(isPlay()){
+    if(sec === "passivas"){ return document.getElementById("grp-passivas"); }
     return document.getElementById("grp-" + (ACT_KEYS.indexOf(it.act) > -1 ? it.act : "padrao"));
   }
   return document.getElementById(sec);
 }
 function renderAll(){
   atkReg = [];
-  ["ataques"].concat(SECS, ["grp-padrao", "grp-mov", "grp-livre"]).forEach(function(id){ document.getElementById(id).innerHTML = ""; });
+  ["ataques"].concat(SECS, ["grp-padrao", "grp-mov", "grp-livre", "grp-spent", "grp-passivas"]).forEach(function(id){ document.getElementById(id).innerHTML = ""; });
   S.ataques.forEach(function(it){ rootFor("ataques", it).appendChild(mkAttack(it)); });
   reg = [];
   SECS.forEach(function(sec){
     S[sec].forEach(function(it){ rootFor(sec, it).appendChild(mkItem(sec, it)); });
   });
+  /* No modo sessão nada é editável: só usar e rolar */
+  if(isPlay()){
+    document.querySelectorAll("#session [contenteditable]").forEach(function(e){ e.contentEditable = "false"; e.classList.remove("ed"); });
+  }
 }
 
 function addItem(sec){

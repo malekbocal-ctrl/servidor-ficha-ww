@@ -227,18 +227,82 @@ body.play .edit-only,body.play .act-row{display:none}
 .grp:empty::before{content:"Nenhuma habilidade neste tipo de ação.";display:block;color:var(--muted);font-size:.95rem;margin-bottom:8px}
 .act-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:2px 0 6px;font-size:.9rem;font-weight:700}
 .act-row select{font:inherit;font-weight:400;padding:3px 8px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px}
-.turn-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
-.act-btn{font:inherit;font-weight:700;cursor:pointer;padding:6px 18px;border-radius:999px;border:2px solid var(--sea);background:var(--sea);color:var(--panel)}
+.turn-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.act-btn{font:inherit;font-weight:700;cursor:pointer;padding:4px 16px;border-radius:999px;border:2px solid var(--sea);background:var(--sea);color:var(--panel)}
 .act-btn:hover:not(:disabled){filter:brightness(1.12)}
 .act-btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .act-btn:disabled{opacity:.45;cursor:not-allowed}
-.ctr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 10px}
-.ctr-n{font-size:1.5rem;min-width:3ch}
-.pips{display:inline-flex;gap:5px}
-.pip{width:14px;height:14px;border-radius:50%;border:2px solid var(--sea)}
-.pip.on{background:var(--sea)}
-.ctr-max{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
-.ctr-max b{color:var(--ink);min-width:1.2ch;text-align:center}
+.acfg{display:flex;flex-wrap:wrap;gap:8px 24px}
+.acfg-row{display:inline-flex;align-items:center;gap:8px;font-size:.95rem}
+.acfg-row b{min-width:1.4ch;text-align:center}
+/* ---- Modo sessão compacto ---- */
+body.play .cols{display:none}
+body.play .topbar{grid-template-columns:1fr minmax(0,300px) 1fr;margin-bottom:8px}
+body.play #session{display:grid}
+#session{grid-template-columns:minmax(210px,290px) minmax(0,1fr);gap:16px 28px;align-items:start}
+.ses-st{padding-right:26px;border-right:1px solid var(--line);min-width:0}
+.ses-nm{font-family:"Pirata One",Georgia,serif;font-size:1.6rem;line-height:1.1;margin-bottom:4px;overflow-wrap:anywhere}
+.ses-nm .tag{font-family:"Alegreya Sans",system-ui,sans-serif;font-size:.85rem;margin-left:6px}
+.big{display:flex;align-items:baseline;gap:8px;line-height:1}
+.big b{font-size:clamp(3.2rem,8vw,4.6rem);font-weight:700}
+.big span,.mid span{color:var(--muted);font-size:1.25rem;font-weight:500}
+.mid{display:flex;align-items:baseline;gap:6px;margin-top:14px;line-height:1}
+.mid b{font-size:2rem;font-weight:700}
+.bar{height:12px;margin:8px 0;background:var(--line);border-radius:3px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bar i{display:block;height:100%;width:0;background:var(--red);transition:width .2s}
+.bar.est i{background:var(--fillb)}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+.qa{display:flex;gap:6px;align-items:stretch}
+.qa input{width:7ch;flex:1 1 auto;min-width:0;font:inherit;font-size:.95rem;padding:3px 8px;color:var(--ink);background:var(--bg);border:1px solid var(--line);-moz-appearance:textfield;appearance:textfield}
+.qa input::-webkit-outer-spin-button,.qa input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.qa input:focus-visible{outline:2px solid var(--sea);outline-offset:-1px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 12px;margin-top:16px}
+.kv div{display:flex;flex-direction:column;min-width:0}
+.kv span{color:var(--muted);font-size:.85rem;line-height:1.2}
+.kv b{font-size:1.35rem;line-height:1.2}
+#ses-dm-slot .dm{flex-direction:column;align-items:stretch;gap:8px;margin-top:16px}
+#ses-dm-slot .dm-info{flex:none}
+#ses-dm-slot .dm-btn{padding:6px 14px}
+.ses-act{min-width:0}
+.hexes{display:flex;flex-wrap:wrap;gap:12px 18px}
+.hxw{font:inherit;background:none;border:none;padding:0;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:72px}
+.hx{width:60px;height:68px;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:var(--sea);color:var(--panel);display:flex;align-items:center;justify-content:center;font-size:1.35rem;transition:background .15s}
+.hxw b{font-size:.95rem;line-height:1.1}
+.hxw small{color:var(--muted);font-weight:700;font-size:.85rem}
+.hxw.out .hx{background:var(--line);color:var(--muted)}
+.hxw.out small{color:var(--red)}
+button.hxw:hover .hx{filter:brightness(1.15)}
+.hxw:focus-visible{outline:2px solid var(--sea);outline-offset:3px}
+.hxw.free{cursor:default}
+.hxw.free .hx{background:var(--ink);color:var(--bg)}
+.hxc{display:flex;flex-direction:column;align-items:center;gap:4px}
+.hxadj{display:inline-flex;align-items:center;gap:4px}
+.hxadj .mini{padding:0 8px;font-size:.85rem;line-height:1.5;min-width:0}
+.keys{margin:8px 0 0;font-size:.85rem;color:var(--muted)}
+.acols{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px 22px;margin-top:14px}
+.acol h3{font-size:.85rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 0 2px;padding-top:6px;border-top:3px solid var(--line)}
+#session .item{background:none;border:none;border-bottom:1px solid var(--line);margin:0}
+#session .item .head{padding:5px 0;gap:6px;flex-wrap:wrap}
+#session .nm{font-weight:700;padding:2px 0;flex:1 1 7em}
+#session .cost,#session .atk .tp,#session .act-row{display:none}
+#session .chip{font-size:.8rem;color:var(--muted);border:1px solid var(--line);padding:1px 8px;white-space:nowrap}
+#session .use{min-width:0;padding:2px 12px;font-size:.9rem}
+#session .roll{padding:2px 9px;font-size:.9rem}
+#session .atk .dm{display:inline;margin:0;padding:0 2px;background:none;border:none;font-size:.85rem}
+#session .item.awake .use{padding:3px 14px;font-size:.95rem}
+#session .desc p{padding:2px 0 8px;border-top:none;color:var(--muted);font-size:.92rem;min-height:0}
+#session .res{padding:4px 0 6px}
+#session .grp:empty::before{content:"Nenhuma.";margin:6px 0;font-size:.9rem}
+.chip{display:none}
+#session .chip:not([hidden]){display:inline}
+.ses-more{margin-top:14px}
+.ses-more summary{cursor:pointer;font-weight:700;padding:4px 0}
+.ses-more summary:focus-visible{outline:2px solid var(--sea);outline-offset:2px}
+@media (max-width:760px){
+  #session{grid-template-columns:1fr}
+  .ses-st{padding-right:0;border-right:none;padding-bottom:16px;border-bottom:1px solid var(--line)}
+}
+@media print{#session{display:none!important}}
 body.play .item.awake{border-color:var(--gold)}
 body.play .item.awake .use{font-size:1.05rem;padding:8px 22px;border-radius:999px;background:var(--gold);border:2px solid var(--gold);color:#14283b;box-shadow:0 0 0 0 rgba(217,168,70,.6);animation:awk 1.8s ease-in-out infinite}
 body.play .item.awake .use:hover:not(:disabled):not(.on){background:var(--gold);color:#14283b;filter:brightness(1.12)}
@@ -299,6 +363,48 @@ body:not(.play) .item.awake .use{display:none}
       <div id="st-st" class="st" role="status" aria-live="polite"></div>
     </div>
   </div>
+
+  <section id="session" class="play-only" aria-label="Modo sessão">
+    <div class="ses-st">
+      <div class="ses-nm"><span id="ses-name"></span><span id="ses-awake" class="tag" hidden>Despertado</span></div>
+      <div class="big" aria-label="Vida"><b id="ses-hp">0</b><span>/ <span id="ses-hpm">0</span></span></div>
+      <div class="bar" aria-hidden="true"><i id="ses-hpb"></i></div>
+      <div class="qa">
+        <input id="ses-hpv" type="number" inputmode="numeric" min="1" placeholder="valor" aria-label="Valor de dano ou cura">
+        <button class="mini" type="button" data-q="hp" data-s="-1">Dano</button>
+        <button class="mini" type="button" data-q="hp" data-s="1">Cura</button>
+      </div>
+      <div class="mid" aria-label="Estamina"><b id="ses-est">0</b><span>/ <span id="ses-estm">0</span> Estamina</span></div>
+      <div class="bar est" aria-hidden="true"><i id="ses-estb"></i></div>
+      <div class="qa">
+        <input id="ses-estv" type="number" inputmode="numeric" min="1" placeholder="valor" aria-label="Valor de estamina">
+        <button class="mini" type="button" data-q="est" data-s="-1">Gastar</button>
+        <button class="mini" type="button" data-q="est" data-s="1">Recuperar</button>
+      </div>
+      <div class="kv" id="ses-kv"></div>
+      <div id="ses-dm-slot"></div>
+    </div>
+    <div class="ses-act">
+      <div class="hexes">
+        <div class="hxc" id="hxc-pad"><button class="hxw" id="hx-pad" type="button" title="Gastar uma ação padrão (1)"><span class="hx" aria-hidden="true">◆</span><b>Padrão</b><small>1/1</small></button></div>
+        <div class="hxc" id="hxc-mov"><button class="hxw" id="hx-mov" type="button" title="Gastar uma ação de movimento (2)"><span class="hx" aria-hidden="true">❖</span><b>Movimento</b><small>1/1</small></button></div>
+        <div class="hxc"><div class="hxw free"><span class="hx" aria-hidden="true">∞</span><b>Livres</b><small>ilimitadas</small></div></div>
+      </div>
+      <div class="turn-bar">
+        <button id="new-turn" class="act-btn" type="button">Novo turno</button>
+        <button id="undo-act" class="mini" type="button">Desfazer ação</button>
+        <button id="play-reset-uses" class="mini" type="button">Restaurar usos</button>
+      </div>
+      <p class="keys">Atalhos: N novo turno • 1 Padrão • 2 Movimento • D dano</p>
+      <div class="acols">
+        <div class="acol"><h3>◆ Padrão</h3><div id="grp-padrao" class="grp"></div></div>
+        <div class="acol"><h3>❖ Movimento</h3><div id="grp-mov" class="grp"></div></div>
+        <div class="acol"><h3>∞ Livres</h3><div id="grp-livre" class="grp"></div></div>
+      </div>
+      <details class="ses-more" id="spent-box" hidden><summary>Gastas ou indisponíveis (<span id="spent-n">0</span>)</summary><div id="grp-spent"></div></details>
+      <details class="ses-more" id="pas-box" hidden><summary>Habilidades passivas (<span id="pas-n">0</span>)</summary><div id="grp-passivas"></div></details>
+    </div>
+  </section>
 
   <div class="cols">
   <div class="col">
@@ -369,20 +475,8 @@ body:not(.play) .item.awake .use{display:none}
   </div>
 
   <div class="col">
-    <div class="play-only" id="play-acts">
-      <div class="turn-bar">
-        <button id="new-turn" class="act-btn" type="button">Novo turno</button>
-        <button id="play-reset-uses" class="mini" type="button">Restaurar usos</button>
-      </div>
-      <h2>Ações padrão</h2>
-      <div class="ctr" id="ctr-pad"></div>
-      <div id="grp-padrao" class="grp"></div>
-      <h2>Ações de movimento</h2>
-      <div class="ctr" id="ctr-mov"></div>
-      <div id="grp-mov" class="grp"></div>
-      <h2>Ações livres <small class="cst">(ilimitadas)</small></h2>
-      <div id="grp-livre" class="grp"></div>
-    </div>
+    <h2 class="edit-only">Ações por turno</h2>
+    <div id="act-cfg" class="acfg edit-only"></div>
 
     <h2 class="hrow edit-only"><span>Ataques</span><span class="btns"><button class="mini" type="button" data-add="ataques">+ Ataque</button></span></h2>
     <div id="ataques" class="edit-only"></div>
@@ -474,7 +568,7 @@ body:not(.play) .item.awake .use{display:none}
     document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden"){ flush(); } });
     window.addEventListener("pagehide", function(){ flush(); });
     var s = document.createElement("script");
-    s.src = "sheet.js?v=6";
+    s.src = "sheet.js?v=8";
     s.onload = function(){ window.CLOUD.armed = true; msg.hidden = true; main.classList.remove("loading"); say("Salvo na nuvem ✓", "ok"); };
     s.onerror = function(){ fail("Não foi possível carregar o arquivo sheet.js."); };
     document.body.appendChild(s);
