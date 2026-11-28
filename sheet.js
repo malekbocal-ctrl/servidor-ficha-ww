@@ -233,6 +233,12 @@ function spendAct(k){
   S.act[k + "Used"] = actUsed(k) + 1; actHist.push(k); show();
 }
 function newTurn(){ S.act.padUsed = 0; S.act.movUsed = 0; actHist = []; show(); }
+/* Chegou a vez desta ficha no combate (aviso do common.js): zera as ações uma vez por turno */
+window.addEventListener("ww-turno", function(ev){
+  var d = ev.detail || {};
+  if(String(d.ficha) !== String(CLOUD.id) || !window.WW_TURNO){ return; }
+  if(window.WW_TURNO.zerar(S.act, d.chave)){ actHist = []; show(); }
+});
 function moveDM(){
   var b = $id("dm"), slot = $id("ses-dm-slot"); if(!b || !slot){ return; }
   if(!dmHome){ dmHome = b.parentNode; dmNext = b.nextSibling; }

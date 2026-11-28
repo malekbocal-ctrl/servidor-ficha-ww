@@ -526,7 +526,7 @@ body:not(.play) .item.awake .use{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="common.js?v=4"></script>
+<script src="common.js?v=5"></script>
 <script>
 (function(){
   var msg = document.getElementById("boot-msg"), main = document.getElementById("sheet-main");
@@ -571,7 +571,7 @@ body:not(.play) .item.awake .use{display:none}
     document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden"){ flush(); } });
     window.addEventListener("pagehide", function(){ flush(); });
     var s = document.createElement("script");
-    s.src = "sheet.js?v=10";
+    s.src = "sheet.js?v=11";
     s.onload = function(){ window.CLOUD.armed = true; msg.hidden = true; main.classList.remove("loading"); say("Salvo na nuvem ✓", "ok"); };
     s.onerror = function(){ fail("Não foi possível carregar o arquivo sheet.js."); };
     document.body.appendChild(s);

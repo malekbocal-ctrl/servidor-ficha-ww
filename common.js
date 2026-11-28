@@ -61,6 +61,21 @@
   };
 })();
 
+/* Turno do combate: quando chega a vez de uma ficha, as ações dela (padrão e movimento) voltam a zero.
+   S.act.turnoRef guarda qual turno já foi zerado, para zerar uma vez só por turno. */
+window.WW_TURNO = {
+  /* "início do combate|rodada|ficha da vez", ou null sem combate/turno */
+  chave: function(ativo, iniciado, rodada, vez){
+    return ativo && iniciado && vez ? iniciado + "|" + (parseInt(rodada, 10) || 1) + "|" + vez : null;
+  },
+  /* zera as ações em S.act se ainda não foi zerado neste turno; devolve true se mudou */
+  zerar: function(act, chave){
+    if(!act || !chave || act.turnoRef === chave){ return false; }
+    act.padUsed = 0; act.movUsed = 0; act.turnoRef = chave;
+    return true;
+  }
+};
+
 /* Aviso de combate: quando o mestre inicia um combate, aparece um pop-up
    em qualquer página do site (menos na própria página do combate). */
 (function(){
@@ -110,15 +125,23 @@
   function links(on){
     document.querySelectorAll("[data-ww-combate]").forEach(function(a){ a.hidden = !on; });
   }
+  var lastVez = "";
+  function vez(row){   // avisa a ficha aberta (sheet.js) de quem é a vez
+    var e = row && row.estado, k = e ? window.WW_TURNO.chave(row.ativo, row.iniciado_em, e.round, e.turn) : null;
+    if(!k || k === lastVez){ return; }
+    lastVez = k;
+    try { window.dispatchEvent(new CustomEvent("ww-turno", {detail: {ficha: String(e.turn), chave: k}})); } catch(x){}
+  }
   function check(row){
     if(!row){ links(false); return; }
+    if(row.estado !== undefined){ vez(row); }
     links(!!row.ativo);
     if(!row.ativo){ if(box){ close(); } return; }   // combate encerrado: some o aviso
     if(!row.iniciado_em || row.iniciado_em === seen() || row.iniciado_em === shown){ return; }
     show(row);
   }
   function fetchRow(){
-    sb.from("combate").select("ativo,iniciado_em").eq("id", 1).maybeSingle().then(function(r){
+    sb.from("combate").select("ativo,iniciado_em,estado").eq("id", 1).maybeSingle().then(function(r){
       if(!r.error){ check(r.data); }   // sem a tabela (combate.sql não rodado): fica quieto
     });
   }

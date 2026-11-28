@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#e9eef0; --panel:#f7f9fa; --ink:#14283b; --muted:#5b6c7b; --line:#b9c6cf;
-  --red:#b5342b; --gold:#a9791c; --sea:#1f6f8b; --fillb:#2f8f5b;
+  --red:#b5342b; --gold:#a9791c; --sea:#1f6f8b; --fillb:#2f8f5b; --atk:#e23b2e; --atk-d:#8e1a12;
   --cell:30px;
   color-scheme:light; box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
@@ -85,6 +85,34 @@ button:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid va
 .reach::after{content:"";position:absolute;left:50%;top:50%;width:calc(var(--cell) * .26);height:calc(var(--cell) * .26);margin:calc(var(--cell) * -.13) 0 0 calc(var(--cell) * -.13);border-radius:50%;background:color-mix(in srgb,var(--sea) 55%,transparent)}
 .reach.mine{background:color-mix(in srgb,var(--fillb) 20%,transparent)}
 .reach.mine::after{background:color-mix(in srgb,var(--fillb) 60%,transparent)}
+
+/* ---- Mira (botão direito / botão Mirar no celular) ---- */
+.aim{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:6;overflow:visible}
+.aim .arw{opacity:.8}
+.aim .ln{fill:none;stroke:var(--atk);stroke-width:.2;stroke-linecap:butt;stroke-linejoin:miter}
+.aim .hd{fill:var(--atk)}
+.aim .tgf{fill:color-mix(in srgb,var(--atk) 12%,transparent)}
+.aim .tg{fill:none;stroke:var(--atk);stroke-width:.1;opacity:.6}
+.aim .tge{fill:none;stroke:var(--atk-d);stroke-width:.025;opacity:.9}
+.aim .lb{font:700 .42px "Alegreya Sans",system-ui,sans-serif;fill:var(--ink);paint-order:stroke;stroke:var(--panel);stroke-width:.12}
+.mira-btn{display:none}
+@media (pointer:coarse){.mira-btn{display:inline-block}}
+.mira-btn[aria-pressed="true"]{background:var(--red);border-color:var(--red);color:var(--panel)}
+.amenu{position:fixed;z-index:50;width:min(330px,calc(100vw - 16px));max-height:min(70vh,520px);overflow:auto;background:var(--panel);color:var(--ink);border:2px solid var(--ink);box-shadow:0 8px 30px rgba(0,0,0,.45);font-size:.95rem}
+.amenu header{padding:8px 12px;border-bottom:1px solid var(--line);font-weight:700}
+.amenu header small{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+.amenu .grp{padding:6px 12px 2px;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.amenu .opt{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);padding:7px 12px;color:var(--ink);background:none;font-weight:700}
+.amenu .opt:hover:not(:disabled),.amenu .opt:focus-visible{background:color-mix(in srgb,var(--sea) 18%,transparent);color:var(--ink)}
+.amenu .opt small{display:block;font-weight:400;font-size:.82rem;color:var(--muted)}
+.amenu .opt:disabled{opacity:.5}
+.amenu .opt:disabled small{color:var(--red)}
+.amenu .res{padding:10px 12px;font-size:1rem}
+.amenu .res b{font-size:1.25rem}
+.amenu .res .crit{color:var(--gold);font-weight:700} .amenu .res .fail{color:var(--red);font-weight:700}
+.amenu footer{display:flex;gap:8px;align-items:center;padding:8px 12px;font-size:.82rem;color:var(--muted)}
+.amenu footer .sp{flex:1}
+.amenu .empty{padding:8px 12px}
 
 /* ---- Controlador ---- */
 .ctl{background:var(--panel);border:1px solid var(--line);padding:14px 16px}
@@ -166,6 +194,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
       <div class="btools">
         <span id="hint"></span>
         <span style="flex:1"></span>
+        <button id="mira" class="mini mira-btn" type="button" aria-pressed="false">🎯 Mirar</button>
         <button id="zo" class="mini" type="button" aria-label="Diminuir o zoom">−</button>
         <span id="zv">100%</span>
         <button id="zi" class="mini" type="button" aria-label="Aumentar o zoom">+</button>
@@ -199,7 +228,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="common.js?v=4"></script>
+<script src="common.js?v=5"></script>
 <script>
 (function(){
   var N = 20, OLDKEY = "wanted-warriors-combate", ZKEY = "wanted-warriors-combate-zoom", SEEN = "wanted-warriors-combate-visto";
@@ -434,6 +463,269 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     var r = board.getBoundingClientRect();
     return {x: Math.floor((ev.clientX - r.left) / zoom), y: Math.floor((ev.clientY - r.top) / zoom)};
   }
+  /* =====================================================================
+     Mira: botão direito na peça e arrastar até o alvo (no celular: botão Mirar).
+     A seta segue o grid; a distância conta reto 1 e diagonal 2 (igual ao movimento).
+     Ao soltar, escolhe um ataque ou técnica: gasta a ação e o EST na ficha e rola só o ataque.
+     Jogador: só a própria peça; fora do próprio turno, só o que for ação livre. Mestre: livre.
+     ===================================================================== */
+  var aim = null, mira = false, menuEl = null, ctxBlockUntil = 0;
+  var ACTN = {padrao:"ação padrão", mov:"ação de movimento", livre:"ação livre"};
+  /* Freestyle: só no combate, sempre disponível (d20 + Freestyle, ação padrão, sem custo) */
+  var FREE = {id:"__freestyle", n:"Freestyle", t:"FS", act:"padrao"};
+  function canAim(p){ return me.master || (ROW.ativo && info(p.id).owner === me.id); }
+  function setMira(on){ mira = on; $("mira").setAttribute("aria-pressed", String(on)); render(); }
+  $("mira").addEventListener("click", function(){ setMira(!mira); });
+  function die(n){
+    try { var a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n + 1; }
+    catch(e){ return Math.floor(Math.random() * n) + 1; }
+  }
+  function fmtMod(n){ return (n < 0 ? "−" : "+") + Math.abs(n); }
+  function costEst(c){ var m = /(\d+)\s*EST/i.exec(c || ""); return m ? +m[1] : null; }
+  function costUses(c){ var m = /^\s*(\d+)\s*x/i.exec(c || ""); return m ? +m[1] : null; }
+  /* Mesmo cálculo da ficha (sheet.js → atkMod), a partir dos dados salvos */
+  function modOf(d, t){
+    var B = d.BASE || {}, A = {fo:0, des:0, agi:0, eng:0, vig:0, int:0}, BON = d.BONUS || {}, SW = d.SW || {};
+    Object.keys(A).forEach(function(k){ A[k] = Math.max(0, num(B[k]) || 0); });
+    var dsp = d.S && Array.isArray(d.S.despertar) ? d.S.despertar[0] : null;
+    if(d.aw && dsp){
+      var AB = {FOR:"fo", DEX:"des", AGI:"agi", ENG:"eng", VIG:"vig", INT:"int"}, re = /([+\-−]?\s*\d+)\s*(FOR|DEX|AGI|ENG|VIG|INT)/gi, m;
+      while((m = re.exec(dsp.d || ""))){ var n = parseInt(m[1].replace("−", "-").replace(/\s/g, ""), 10); if(!isNaN(n)){ A[AB[m[2].toUpperCase()]] += n; } }
+    }
+    var b = function(k){ return num(BON[k]) || 0; };
+    return t === "CD" ? 5 + (SW.cd ? A.fo : A.des) + b("cd") : t === "FS" ? 4 + (SW.fs ? A.des : A.fo) + b("fs")
+         : t === "TC" ? 2 + (SW.tc ? A.fo : A.des) + b("tc") : 5 + (SW.cc ? A.des : A.fo) + b("cc");
+  }
+  function actOf(it){ return ["padrao", "mov", "livre"].indexOf(it.act) > -1 ? it.act : "padrao"; }
+  function actState(d){
+    var a = (d.S && d.S.act) || {}, g = function(k, def){ var v = parseInt(a[k], 10); return isNaN(v) ? def : v; };
+    var pm = Math.max(0, g("padMax", 1)), mm = Math.max(0, g("movMax", 1));
+    return {padrao: Math.max(0, pm - Math.min(g("padUsed", 0), pm)), padMax: pm, mov: Math.max(0, mm - Math.min(g("movUsed", 0), mm)), movMax: mm};
+  }
+  /* Por que este item não pode ser usado agora ("" = pode) */
+  function whyNot(d, p, it, kind){
+    if(me.master){ return ""; }
+    var ac = actOf(it), st = actState(d);
+    if(C.turn !== p.id && ac !== "livre"){ return "fora do seu turno, só ações livres"; }
+    if(ac !== "livre" && st[ac] <= 0){ return "sem " + ACTN[ac] + " neste turno"; }
+    var e = kind === "tec" ? costEst(it.c) : null;
+    if(e && e > (num(d.est) || 0)){ return "EST insuficiente (" + (num(d.est) || 0) + "/" + e + ")"; }
+    var x = kind === "tec" ? costUses(it.c) : null;
+    if(x !== null && !((d.uses || {})[it.id] > 0)){ return "sem usos restantes"; }
+    return "";
+  }
+
+  /* --- a seta --- */
+  function aimPath(a, b){   // seta reta, do centro da peça ao centro da casa alvo
+    return a.x === b.x && a.y === b.y ? [{x:a.x, y:a.y}] : [{x:a.x, y:a.y}, {x:b.x, y:b.y}];
+  }
+  function dist(a, b){ return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }   // reto 1, diagonal 2
+  function svgEl(t, attrs){ var e = document.createElementNS("http://www.w3.org/2000/svg", t); Object.keys(attrs).forEach(function(k){ e.setAttribute(k, attrs[k]); }); return e; }
+  function drawAim(){
+    var old = board.querySelector(".aim"); if(old){ old.remove(); }
+    if(!aim){ return; }
+    var a = {x:aim.p.x, y:aim.p.y}, b = aim.to, s = svgEl("svg", {"class":"aim", viewBox:"0 0 " + N + " " + N, preserveAspectRatio:"none", "aria-hidden":"true"});
+    var pts = aimPath(a, b);
+    if(pts.length > 1){
+      // casa atacada: moldura interna vermelha translúcida, com fio mais escuro na borda (como o destaque do chess.com)
+      s.appendChild(svgEl("rect", {"class":"tgf", x:b.x, y:b.y, width:1, height:1}));
+      s.appendChild(svgEl("rect", {"class":"tg", x:b.x + .065, y:b.y + .065, width:.87, height:.87}));
+      s.appendChild(svgEl("rect", {"class":"tge", x:b.x + .0125, y:b.y + .0125, width:.975, height:.975}));
+      s.appendChild(svgEl("rect", {"class":"tge", x:b.x + .1225, y:b.y + .1225, width:.755, height:.755}));
+      // a seta: larga e translúcida, do centro da peça até perto do centro do alvo
+      var c = pts.map(function(q){ return {x:q.x + .5, y:q.y + .5}; }), last = c[c.length - 1], prev = c[c.length - 2], one = c[1];
+      var u = function(p, q){ var L = Math.hypot(q.x - p.x, q.y - p.y) || 1; return {x:(q.x - p.x) / L, y:(q.y - p.y) / L}; };
+      var u0 = u(c[0], one), ue = u(prev, last);
+      c[0] = {x:c[0].x + u0.x * .28, y:c[0].y + u0.y * .28};   // sai da borda da peça
+      var tip = {x:last.x - ue.x * .05, y:last.y - ue.y * .05}, base = {x:tip.x - ue.x * .42, y:tip.y - ue.y * .42};
+      var g = svgEl("g", {"class":"arw"});
+      g.appendChild(svgEl("polyline", {"class":"ln", points:c.slice(0, -1).concat([base]).map(function(q){ return q.x + "," + q.y; }).join(" ")}));
+      var px = -ue.y * .28, py = ue.x * .28;
+      g.appendChild(svgEl("polygon", {"class":"hd", points:[tip.x + "," + tip.y, (base.x + px) + "," + (base.y + py), (base.x - px) + "," + (base.y - py)].join(" ")}));
+      s.appendChild(g);
+      var lb = svgEl("text", {"class":"lb", x:Math.min(N - .2, Math.max(.2, b.x + .5)), y:(b.y < 1 || (ue.y > 0 && b.y < N - 1)) ? b.y + 1.45 : b.y - .18, "text-anchor":"middle"});   // longe de onde a seta chega
+      lb.textContent = dist(a, b) + (dist(a, b) === 1 ? " casa" : " casas");
+      s.appendChild(lb);
+    }
+    board.appendChild(s);
+  }
+  function clampCell(c){ return {x: Math.max(0, Math.min(N - 1, c.x)), y: Math.max(0, Math.min(N - 1, c.y))}; }
+  function pieceAt(c){ return C.parts.filter(function(q){ return q.x === c.x && q.y === c.y; })[0] || null; }
+  function loadData(id){
+    return sb.from("fichas").select("data").eq("id", id).maybeSingle().then(function(r){
+      if(r.error){ throw r.error; }
+      if(!r.data){ throw new Error("ficha não encontrada ou sem permissão."); }
+      return r.data.data || {};
+    });
+  }
+  /* Chegou a vez de uma ficha: zera as ações dela (uma vez por turno; S.act.turnoRef guarda o turno já zerado).
+     Quem faz é o mestre ou o dono da peça, o que estiver com a página aberta. */
+  var zerado = "", zerP = Promise.resolve();
+  function chaveVez(){ return window.WW_TURNO ? window.WW_TURNO.chave(ROW.ativo, ROW.iniciado_em, C.round, C.turn) : null; }
+  function zerarVez(){
+    var k = chaveVez(), id = C.turn;
+    if(!k || k === zerado || !me || !(me.master || info(id).owner === me.id)){ return; }
+    zerado = k;
+    zerP = loadData(id).then(function(d){
+      d.S = d.S || {};
+      d.S.act = (d.S.act && typeof d.S.act === "object" && !Array.isArray(d.S.act)) ? d.S.act : {};
+      if(!window.WW_TURNO.zerar(d.S.act, k)){ return; }
+      return sb.from("fichas").update({data: d}).eq("id", id).then(function(r){ if(r.error){ throw r.error; } });
+    }).catch(function(e){ if(zerado === k){ zerado = ""; } say("Não foi possível zerar as ações do turno: " + (e && e.message || e), "err"); });
+  }
+  function startAim(p, ev){
+    closeMenu();
+    aim = {p:p, to:{x:p.x, y:p.y}, pid:ev.pointerId, phase:"drag", data:loadData(p.id)};
+    aim.data.catch(function(){});
+    try { board.setPointerCapture(ev.pointerId); } catch(e){}
+    drawAim();
+  }
+  function endAimDrag(ev){
+    if(!aim || aim.phase !== "drag" || ev.pointerId !== aim.pid){ return; }
+    ctxBlockUntil = Date.now() + 600;
+    var a = aim;
+    if(ev.type === "pointercancel" || (a.to.x === a.p.x && a.to.y === a.p.y)){ aim = null; drawAim(); }
+    else { a.phase = "menu"; openMenu(a, ev.clientX, ev.clientY); }
+    if(pendingRemote){ var pr = pendingRemote; pendingRemote = null; onRow(pr); }
+  }
+  board.addEventListener("pointermove", function(ev){
+    if(!aim || aim.phase !== "drag" || ev.pointerId !== aim.pid){ return; }
+    var c = clampCell(cellFromEvent(ev));
+    if(c.x !== aim.to.x || c.y !== aim.to.y){ aim.to = c; drawAim(); }
+  });
+  board.addEventListener("pointerup", endAimDrag);
+  board.addEventListener("pointercancel", endAimDrag);
+  board.addEventListener("contextmenu", function(ev){ ev.preventDefault(); });
+  document.addEventListener("contextmenu", function(ev){ if(Date.now() < ctxBlockUntil){ ev.preventDefault(); } });
+
+  /* --- o menu de ataques e técnicas --- */
+  function closeMenu(keepAim){
+    if(menuEl){ menuEl.remove(); menuEl = null; }
+    document.removeEventListener("keydown", menuKey, true);
+    document.removeEventListener("pointerdown", menuOutside, true);
+    if(keepAim !== true && aim && aim.phase === "menu"){ aim = null; drawAim(); }
+  }
+  function menuKey(ev){ if(ev.key === "Escape"){ ev.preventDefault(); closeMenu(); } }
+  function menuOutside(ev){ if(menuEl && !menuEl.contains(ev.target)){ closeMenu(); } }
+  function placeMenu(x, y){
+    var w = menuEl.offsetWidth, h = menuEl.offsetHeight;
+    menuEl.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x + 12)) + "px";
+    menuEl.style.top = Math.max(8, Math.min(window.innerHeight - h - 8, y + 12)) + "px";
+  }
+  function openMenu(a, x, y){
+    closeMenu(true);
+    var who = info(a.p.id).nome || "Personagem", tp = pieceAt(a.to), alvo = tp ? (info(tp.id).nome || "Personagem") : "casa " + (a.to.x + 1) + "," + (a.to.y + 1);
+    var d = dist(a.p, a.to);
+    a.alvo = alvo; a.dist = d;
+    menuEl = el("div", "amenu"); menuEl.setAttribute("role", "dialog"); menuEl.setAttribute("aria-label", "Escolher ataque");
+    var hd = el("header", "", who + " → " + alvo);
+    hd.appendChild(el("small", "", d + (d === 1 ? " casa" : " casas") + (me.master ? "" : C.turn === a.p.id ? " · seu turno" : " · fora do seu turno: só ações livres")));
+    menuEl.appendChild(hd);
+    var body = el("div"); body.appendChild(el("p", "empty", "Carregando ataques…")); menuEl.appendChild(body);
+    document.body.appendChild(menuEl); placeMenu(x, y);
+    document.addEventListener("keydown", menuKey, true);
+    setTimeout(function(){ document.addEventListener("pointerdown", menuOutside, true); }, 0);
+    a.data.then(function(dt){
+      if(!menuEl || aim !== a){ return; }
+      a.d = dt; fillMenu(a, body); placeMenu(x, y);
+    }).catch(function(e){
+      if(!menuEl || aim !== a){ return; }
+      body.textContent = ""; body.appendChild(el("p", "empty", "Não foi possível ler a ficha: " + (e && e.message || e)));
+    });
+  }
+  function fillMenu(a, body){
+    var dt = a.d, S = dt.S || {}, st = actState(dt), first = null;
+    body.textContent = "";
+    var lists = [["atk", "Ataques", [FREE].concat(Array.isArray(S.ataques) ? S.ataques : [])], ["tec", "Técnicas", Array.isArray(S.tecnicas) ? S.tecnicas : []]];
+    lists.forEach(function(L){
+      body.appendChild(el("div", "grp", L[1]));
+      if(!L[2].length){ body.appendChild(el("p", "empty", L[0] === "atk" ? "Nenhum ataque na ficha." : "Nenhuma técnica na ficha.")); return; }
+      L[2].forEach(function(it){
+        var why = whyNot(dt, a.p, it, L[0]), t = L[0] === "tec" ? "TC" : (it.t || "CC"), m = modOf(dt, t);
+        var b = el("button", "opt", it.n || "Sem nome"); b.type = "button";
+        var info2 = [L[0] === "tec" ? "Técnica" : it === FREE ? "Freestyle" : t, "d20 " + fmtMod(m), ACTN[actOf(it)]];
+        if(L[0] === "tec" && (it.c || "").trim()){ info2.push(it.c.trim()); }
+        b.appendChild(el("small", "", why ? "Indisponível: " + why : info2.join(" · ")));
+        b.disabled = !!why;
+        b.addEventListener("click", function(){ useItem(a, it, L[0], body); });
+        body.appendChild(b);
+        if(!why && !first){ first = b; }
+      });
+    });
+    var ft = el("footer");
+    ft.appendChild(el("span", "", "Padrão " + st.padrao + "/" + st.padMax + " · Mov. " + st.mov + "/" + st.movMax + " · EST " + (num(dt.est) === null ? "—" : num(dt.est)) + (num(dt.estm) ? "/" + num(dt.estm) : "")));
+    ft.appendChild(el("span", "sp"));
+    var cx = el("button", "mini", "Cancelar"); cx.type = "button"; cx.addEventListener("click", closeMenu); ft.appendChild(cx);
+    body.appendChild(ft);
+    (first || cx).focus({preventScroll:true});
+  }
+  function useItem(a, it, kind, body){
+    body.querySelectorAll("button").forEach(function(b){ b.disabled = true; });
+    var pid = a.p.id, nome = info(pid).nome || "Personagem";
+    // lê de novo na hora de gastar, para não desfazer algo salvo na ficha nesse meio-tempo
+    zerP.catch(function(){}).then(function(){ return loadData(pid); }).then(function(d){   // espera o zerar do turno terminar
+      var S = d.S || {}, list = kind === "tec" ? S.tecnicas : S.ataques;
+      var cur = it === FREE ? FREE : (Array.isArray(list) ? list : []).filter(function(x){ return x.id === it.id; })[0];
+      if(!cur){ throw new Error("esse item não existe mais na ficha."); }
+      S.act = (S.act && typeof S.act === "object" && !Array.isArray(S.act)) ? S.act : {};
+      if(C.turn === pid && window.WW_TURNO){ window.WW_TURNO.zerar(S.act, chaveVez()); d.S = S; }   // turno novo ainda não zerado
+      var why = whyNot(d, a.p, cur, kind); if(why){ throw new Error(why + "."); }
+      var ac = actOf(cur), gasto = [];
+      if(ac !== "livre"){
+        var k = ac === "padrao" ? "pad" : "mov", mx = parseInt(S.act[k + "Max"], 10); mx = isNaN(mx) ? 1 : mx;
+        var us = parseInt(S.act[k + "Used"], 10); us = isNaN(us) ? 0 : us;
+        S.act[k + "Max"] = mx; S.act[k + "Used"] = Math.min(mx, us + 1);
+      }
+      gasto.push(ACTN[ac]);
+      var e = kind === "tec" ? costEst(cur.c) : null;
+      if(e){ d.est = String(Math.max(0, (num(d.est) || 0) - e)); gasto.push(e + " EST"); }
+      var x = kind === "tec" ? costUses(cur.c) : null;
+      if(x !== null){ d.uses = d.uses || {}; d.uses[cur.id] = Math.max(0, (d.uses[cur.id] || 0) - 1); gasto.push("1 uso"); }
+      d.S = S;
+      return sb.from("fichas").update({data: d}).eq("id", pid).then(function(r){
+        if(r.error){ throw r.error; }
+        return {d:d, cur:cur, gasto:gasto};
+      });
+    }).then(function(g){
+      var t = kind === "tec" ? "TC" : (g.cur.t || "CC"), m = modOf(g.d, t), r = die(20), tot = r + m;
+      var rotulo = kind === "tec" ? "Técnica" : g.cur === FREE ? "Freestyle" : t;
+      body.textContent = "";
+      var res = el("div", "res");
+      var titulo = g.cur === FREE ? "Freestyle" : (g.cur.n || "Ataque") + " (" + rotulo + ")";
+      res.appendChild(document.createTextNode(titulo + ": d20 [" + r + "] " + fmtMod(m) + " = "));
+      res.appendChild(el("b", "", String(tot)));
+      if(r === 20){ res.appendChild(el("div", "crit", "Crítico! Acerto garantido e dano dobrado")); }
+      if(r === 1){ res.appendChild(el("div", "fail", "Falha crítica...")); }
+      res.appendChild(el("small", "", "Gastou: " + g.gasto.join(" · ")));
+      res.lastChild.style.cssText = "display:block;color:var(--muted);font-size:.82rem;margin-top:4px";
+      var dc = el("small", "", ""); dc.style.cssText = "display:block;color:var(--muted);font-size:.82rem"; res.appendChild(dc);
+      body.appendChild(res);
+      var ft = el("footer"); ft.appendChild(el("span", "sp"));
+      var ok = el("button", "mini", "Fechar"); ok.type = "button"; ok.addEventListener("click", closeMenu); ft.appendChild(ok);
+      body.appendChild(ft); ok.focus({preventScroll:true});
+      say("🎯 " + nome + " → " + a.alvo + ": " + (g.cur.n || "Ataque") + " = " + tot + (r === 20 ? " (crítico!)" : r === 1 ? " (falha crítica)" : ""), r === 1 ? "err" : "ok");
+      if(mira){ mira = false; $("mira").setAttribute("aria-pressed", "false"); }
+      if(me.master && F[pid]){ F[pid].est = num(g.d.est); syncInfo(pid); persist(); render(); }
+      // Discord: mesmo canal das rolagens da ficha (respeita a opção "Enviar rolagens" deste navegador)
+      var off = false; try { off = localStorage.getItem("wanted-warriors-discord-rolagens") === "0"; } catch(e){}
+      if(window.WW_DISCORD && !off){
+        window.WW_DISCORD.canais().then(function(cf){
+          if(!cf || !cf.canal_rolagens){ return; }
+          dc.textContent = "Enviando ao Discord…";
+          var txt = "🎯 **" + nome + "** → **" + a.alvo + "** (" + a.dist + (a.dist === 1 ? " casa" : " casas") + ") — " + titulo + ": d20 [" + r + "] " + fmtMod(m) + " = **" + tot + "**" +
+            (r === 20 ? "\n✨ Crítico! Acerto garantido e dano dobrado" : r === 1 ? "\n💀 Falha crítica..." : "") + "\n-# Gastou: " + g.gasto.join(" · ");
+          return window.WW_DISCORD.enviar("rolagem", {ficha: pid, texto: txt}).then(function(){ dc.textContent = "Enviado ao Discord ✓"; });
+        }).catch(function(e){ dc.textContent = "Falha ao enviar ao Discord: " + e.message; });
+      }
+    }).catch(function(e){
+      body.textContent = "";
+      body.appendChild(el("p", "empty", "Não foi possível usar: " + (e && e.message || e)));
+      var ft = el("footer"); ft.appendChild(el("span", "sp"));
+      var ok = el("button", "mini", "Fechar"); ok.type = "button"; ok.addEventListener("click", closeMenu); ft.appendChild(ok);
+      body.appendChild(ft);
+    });
+  }
+
   function mkPic(i, cls){
     var a = el("span", cls);
     if(i.thumb){ var im = el("img"); im.src = i.thumb; im.alt = ""; im.draggable = false; a.appendChild(im); }
@@ -453,6 +745,12 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     t.classList.toggle("sel", p.id === sel);
     t.classList.toggle("down", i.hp === 0);
     t.addEventListener("pointerdown", function(ev){
+      /* botão direito (ou o modo Mirar, no celular): seta de ataque */
+      if(ev.button === 2 || (mira && ev.button === 0)){
+        if(canAim(p)){ ev.preventDefault(); ev.stopPropagation(); startAim(p, ev); }
+        else if(mira){ say("Mire a partir da peça do seu personagem (borda verde).", "err"); }
+        return;
+      }
       if(ev.button !== 0){ return; }
       if(!mv){ select(p.id); return; }
       ev.preventDefault(); t.focus({preventScroll:true});
@@ -573,7 +871,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     var focusId = ae && ae.classList && ae.classList.contains("tok") ? ae.getAttribute("data-id") : null;
     board.textContent = "";
     C.parts.forEach(function(p){ board.appendChild(mkToken(p)); });
-    drawReach();
+    drawReach(); drawAim(); zerarVez();
     if(focusId){ var t = board.querySelector('[data-id="' + focusId + '"]'); if(t){ t.focus({preventScroll:true}); } }
     /* enquanto o mestre digita uma iniciativa, a lista não é redesenhada pela atualização automática */
     var keepIni = !force && ae && ae.classList && ae.classList.contains("ini");
@@ -593,20 +891,24 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
       $("next").disabled = !C.parts.length; $("prev").disabled = !C.turn;
       $("start").hidden = ROW.ativo; $("start").disabled = !C.parts.length;
       $("end").disabled = !ROW.ativo && !C.parts.length;
-      $("hint").textContent = "Tabuleiro 20 × 20 · clique numa peça para ver o alcance · arraste ou use as setas";
+      $("hint").textContent = mira ? "Mirar: arraste de uma peça até o alvo e solte para escolher o ataque."
+        : "Tabuleiro 20 × 20 · clique numa peça para ver o alcance · arraste ou use as setas · botão direito e arraste para atacar";
     } else {
       var own = C.parts.some(function(p){ return info(p.id).owner === me.id; });
       myLinks();
       $("hint").textContent = !ROW.ativo ? "Nenhum combate no momento. Quando o mestre iniciar, ele aparece aqui."
-        : own ? "Arraste a peça do seu personagem (borda verde) ou use as setas." : "Você está assistindo ao combate.";
+        : !own ? "Você está assistindo ao combate."
+        : mira ? "Mirar: arraste da sua peça até o alvo e solte para escolher o ataque."
+        : "Arraste a peça do seu personagem (borda verde) ou use as setas · botão direito e arraste para atacar.";
     }
+    $("mira").hidden = !me.master && !(ROW.ativo && C.parts.some(function(p){ return info(p.id).owner === me.id; }));
   }
 
   /* ---- Linha do combate (Supabase) ---- */
   var pendingRemote = null;
   function onRow(row){
     if(!row){ return; }
-    if(drag){ pendingRemote = row; return; }
+    if(drag || (aim && aim.phase === "drag")){ pendingRemote = row; return; }
     var wasActive = ROW.ativo, prevStart = ROW.iniciado_em;
     ROW.ativo = !!row.ativo; ROW.iniciado_em = row.iniciado_em || null;
     if(me.master){
