@@ -63,7 +63,7 @@ button:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid va
 /* ---- Tabuleiro ---- */
 .btools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px;font-size:.9rem;color:var(--muted)}
 .wrap{overflow:auto;max-height:calc(100vh - 160px);border:2px solid var(--ink);background:var(--panel)}
-.board{position:relative;width:calc(var(--cell) * 30);height:calc(var(--cell) * 30);
+.board{position:relative;width:calc(var(--cell) * 20);height:calc(var(--cell) * 20);
   background-color:var(--panel);
   --grid:color-mix(in srgb,var(--muted) 45%,transparent);
   background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px),linear-gradient(to bottom,var(--grid) 1px,transparent 1px);
@@ -78,6 +78,10 @@ button:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid va
 .tok.down{filter:grayscale(1);opacity:.6}
 .tok:focus-visible{outline:2px solid var(--sea);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.tok{transition:none}}
+.reach{position:absolute;width:var(--cell);height:var(--cell);pointer-events:none;background:color-mix(in srgb,var(--sea) 20%,transparent)}
+.reach::after{content:"";position:absolute;left:50%;top:50%;width:calc(var(--cell) * .26);height:calc(var(--cell) * .26);margin:calc(var(--cell) * -.13) 0 0 calc(var(--cell) * -.13);border-radius:50%;background:color-mix(in srgb,var(--sea) 55%,transparent)}
+.reach.mine{background:color-mix(in srgb,var(--fillb) 20%,transparent)}
+.reach.mine::after{background:color-mix(in srgb,var(--fillb) 60%,transparent)}
 
 /* ---- Controlador ---- */
 .ctl{background:var(--panel);border:1px solid var(--line);padding:14px 16px}
@@ -135,6 +139,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     <h1>Combate</h1>
     <span id="status" class="status"></span>
     <span class="sp"></span>
+    <span id="my-links" style="display:contents"></span>
     <span class="m-only" style="display:contents">
       <button id="add" type="button">+ Adicionar fichas</button>
       <button id="start" class="go" type="button">⚔ Iniciar combate</button>
@@ -163,7 +168,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
         <span id="zv">100%</span>
         <button id="zi" class="mini" type="button" aria-label="Aumentar o zoom">+</button>
       </div>
-      <div class="wrap"><div id="board" class="board" role="application" aria-label="Tabuleiro de 30 por 30 casas"></div></div>
+      <div class="wrap"><div id="board" class="board" role="application" aria-label="Tabuleiro de 20 por 20 casas"></div></div>
     </section>
 
     <aside class="ctl" aria-label="Controlador de combate">
@@ -192,10 +197,10 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="common.js"></script>
+<script src="common.js?v=2"></script>
 <script>
 (function(){
-  var N = 30, OLDKEY = "wanted-warriors-combate", ZKEY = "wanted-warriors-combate-zoom", SEEN = "wanted-warriors-combate-visto";
+  var N = 20, OLDKEY = "wanted-warriors-combate", ZKEY = "wanted-warriors-combate-zoom", SEEN = "wanted-warriors-combate-visto";
   function $(id){ return document.getElementById(id); }
   function el(t, c, txt){ var e = document.createElement(t); if(c){ e.className = c; } if(txt !== undefined){ e.textContent = txt; } return e; }
   function num(v){ var n = parseInt(v, 10); return isNaN(n) ? null : n; }
@@ -249,12 +254,12 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
   }
 
   /* ---- Zoom ---- */
-  var zoom = 30;
-  try { zoom = Math.max(18, Math.min(60, num(localStorage.getItem(ZKEY)) || 30)); } catch(e){}
+  var zoom = 36;
+  try { zoom = Math.max(18, Math.min(60, num(localStorage.getItem(ZKEY)) || 36)); } catch(e){}
   function setZoom(z){
     zoom = Math.max(18, Math.min(60, z));
     document.documentElement.style.setProperty("--cell", zoom + "px");
-    $("zv").textContent = Math.round(100 * zoom / 30) + "%";
+    $("zv").textContent = Math.round(100 * zoom / 36) + "%";
     $("zo").disabled = zoom <= 18; $("zi").disabled = zoom >= 60;
     try { localStorage.setItem(ZKEY, String(zoom)); } catch(e){}
   }
@@ -337,7 +342,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
   function syncInfo(id){
     var f = F[id]; if(!f){ return false; }
     var o = C.info[id] || {}, before = JSON.stringify(o);
-    o.nome = f.nome; o.owner = f.owner_id; o.hp = f.hp; o.hpm = f.hpm; o.est = f.est; o.estm = f.estm;
+    o.nome = f.nome; o.owner = f.owner_id; o.hp = f.hp; o.hpm = f.hpm; o.est = f.est; o.estm = f.estm; o.desl = f.desl;
     var k = pkey(f.portrait);
     if(!k){ o.thumb = ""; o.pk = ""; }
     else if(o.pk !== k){
@@ -361,6 +366,22 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     for(var y = 0; y < N; y++){ for(var x = 0; x < N; x++){ if(!occupied(x, y)){ return {x:x, y:y}; } } }
     return {x:0, y:0};
   }
+  /* Peças que estavam fora do tabuleiro atual (ex.: do tabuleiro antigo de 30 × 30)
+     vão para a casa livre mais próxima dentro dele */
+  function fitBoard(){
+    var moved = false;
+    C.parts.forEach(function(p){
+      if(p.x < N && p.y < N && p.x >= 0 && p.y >= 0){ return; }
+      var tx = Math.max(0, Math.min(N - 1, p.x)), ty = Math.max(0, Math.min(N - 1, p.y)), best = null, bd = Infinity;
+      for(var y = 0; y < N; y++){ for(var x = 0; x < N; x++){
+        if(occupied(x, y, p.id)){ continue; }
+        var d = Math.abs(x - tx) + Math.abs(y - ty);
+        if(d < bd){ bd = d; best = {x:x, y:y}; }
+      } }
+      if(best){ p.x = best.x; p.y = best.y; moved = true; }
+    });
+    if(moved){ persist(); }
+  }
   function moveTo(p, x, y){
     if(x < 0 || y < 0 || x >= N || y >= N){ say("Fora do tabuleiro.", "err"); return false; }
     if(occupied(x, y, p.id)){ say("Essa casa já está ocupada.", "err"); return false; }
@@ -376,6 +397,37 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     return true;
   }
   function select(id){ sel = id; render(); }
+  board.addEventListener("pointerdown", function(ev){ if(ev.target === board && sel){ select(null); } });
+  /* Casas alcançáveis: anda em qualquer direção e pode virar no meio.
+     Reto custa 1, diagonal custa 2; outras peças bloqueiam a passagem. */
+  function reachOf(p, max){
+    var cost = {}, q = [{x:p.x, y:p.y, c:0}], out = [];
+    cost[p.x + "," + p.y] = 0;
+    var dirs = [[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,2],[1,-1,2],[-1,1,2],[-1,-1,2]];
+    while(q.length){
+      var bi = 0; for(var i = 1; i < q.length; i++){ if(q[i].c < q[bi].c){ bi = i; } }
+      var cur = q.splice(bi, 1)[0];
+      if(cur.c > cost[cur.x + "," + cur.y]){ continue; }
+      dirs.forEach(function(d){
+        var x = cur.x + d[0], y = cur.y + d[1], c = cur.c + d[2], k = x + "," + y;
+        if(x < 0 || y < 0 || x >= N || y >= N || c > max || occupied(x, y, p.id)){ return; }
+        if(cost[k] === undefined || c < cost[k]){ if(cost[k] === undefined){ out.push({x:x, y:y}); } cost[k] = c; q.push({x:x, y:y, c:c}); }
+      });
+    }
+    return out;
+  }
+  function drawReach(){
+    board.querySelectorAll(".reach").forEach(function(r){ r.remove(); });
+    var p = sel ? part(sel) : null, d = p ? num(info(p.id).desl) : null;
+    if(!p || !d){ return; }
+    var mine = !me.master && info(p.id).owner === me.id, frag = document.createDocumentFragment();
+    reachOf(p, d).forEach(function(c){
+      var r = el("div", "reach" + (mine ? " mine" : ""));
+      r.style.left = "calc(var(--cell) * " + c.x + ")"; r.style.top = "calc(var(--cell) * " + c.y + ")";
+      frag.appendChild(r);
+    });
+    board.insertBefore(frag, board.firstChild);
+  }
   function cellFromEvent(ev){
     var r = board.getBoundingClientRect();
     return {x: Math.floor((ev.clientX - r.left) / zoom), y: Math.floor((ev.clientY - r.top) / zoom)};
@@ -402,6 +454,10 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
       if(ev.button !== 0){ return; }
       if(!mv){ select(p.id); return; }
       ev.preventDefault(); t.focus({preventScroll:true});
+      if(sel !== p.id){
+        sel = p.id; drawReach();
+        board.querySelectorAll(".tok.sel").forEach(function(o){ o.classList.remove("sel"); }); t.classList.add("sel");
+      }
       drag = {p:p, t:t, sx:ev.clientX, sy:ev.clientY, moved:false, ox:p.x * zoom, oy:p.y * zoom};
       t.setPointerCapture(ev.pointerId);
     });
@@ -446,6 +502,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     hv.classList.toggle("low", !!i.hpm && i.hp !== null && i.hp !== undefined && i.hp / i.hpm <= 0.25);
     var ev = el("span"); ev.appendChild(document.createTextNode("EST ")); ev.appendChild(el("b", "", (i.est === null || i.est === undefined ? "—" : i.est) + "/" + (i.estm || "—")));
     nums.appendChild(hv); nums.appendChild(ev);
+    if(i.desl){ var dv = el("span"); dv.appendChild(document.createTextNode("Desl ")); dv.appendChild(el("b", "", String(i.desl))); nums.appendChild(dv); }
     who.appendChild(nm); who.appendChild(nums);
     var iw = el("div"), ini = el("input", "ini");
     ini.type = "number"; ini.inputMode = "numeric"; ini.value = p.ini === null ? "" : p.ini; ini.placeholder = "—";
@@ -493,11 +550,28 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     return d;
   }
 
+  /* Jogador: botão para a própria ficha (uma por personagem dele no combate;
+     fora do combate, leva para a lista "Minhas fichas") */
+  var myKey = null;
+  function myLinks(){
+    var mine = C.parts.filter(function(p){ return info(p.id).owner === me.id; });
+    var key = mine.map(function(p){ return p.id + ":" + info(p.id).nome; }).join("|");
+    if(key === myKey){ return; } myKey = key;
+    var box = $("my-links"); box.textContent = "";
+    if(!mine.length){ var a0 = el("a", "btn", "📜 Minhas fichas"); a0.href = "index.html"; box.appendChild(a0); return; }
+    mine.forEach(function(p){
+      var a = el("a", "btn", "📜 " + (mine.length > 1 ? info(p.id).nome || "Minha ficha" : "Minha ficha"));
+      a.href = "ficha.html?id=" + encodeURIComponent(p.id);
+      a.title = "Abrir a ficha de " + (info(p.id).nome || "seu personagem");
+      box.appendChild(a);
+    });
+  }
   function render(force){
     var ae = document.activeElement;
     var focusId = ae && ae.classList && ae.classList.contains("tok") ? ae.getAttribute("data-id") : null;
     board.textContent = "";
     C.parts.forEach(function(p){ board.appendChild(mkToken(p)); });
+    drawReach();
     if(focusId){ var t = board.querySelector('[data-id="' + focusId + '"]'); if(t){ t.focus({preventScroll:true}); } }
     /* enquanto o mestre digita uma iniciativa, a lista não é redesenhada pela atualização automática */
     var keepIni = !force && ae && ae.classList && ae.classList.contains("ini");
@@ -517,9 +591,10 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
       $("next").disabled = !C.parts.length; $("prev").disabled = !C.turn;
       $("start").hidden = ROW.ativo; $("start").disabled = !C.parts.length;
       $("end").disabled = !ROW.ativo && !C.parts.length;
-      $("hint").textContent = "Tabuleiro 30 × 30 · arraste as peças · setas movem a selecionada";
+      $("hint").textContent = "Tabuleiro 20 × 20 · clique numa peça para ver o alcance · arraste ou use as setas";
     } else {
       var own = C.parts.some(function(p){ return info(p.id).owner === me.id; });
+      myLinks();
       $("hint").textContent = !ROW.ativo ? "Nenhum combate no momento. Quando o mestre iniciar, ele aparece aqui."
         : own ? "Arraste a peça do seu personagem (borda verde) ou use as setas." : "Você está assistindo ao combate.";
     }
@@ -565,13 +640,24 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
   }
 
   /* ---- Mestre: fichas do Supabase ---- */
-  var COLS = "id,nome,portrait,owner_id,hp:data->>hp,hpm:data->>hpm,est:data->>est,estm:data->>estm,profiles(display_name)";
+  var STATS = "hp:data->>hp,hpm:data->>hpm,est:data->>est,estm:data->>estm,agi:data->BASE->>agi,aw:data->>aw,desp:data->S->despertar->0->>d";
+  var COLS = "id,nome,portrait,owner_id," + STATS + ",profiles(display_name)";
+  /* Deslocamento igual ao da ficha: 5 + AGI (com o bônus de AGI do despertar, se ativo) */
+  function deslOf(f){
+    var agi = num(f.agi) || 0;
+    if(f.aw === true || f.aw === "true"){
+      var re = /([+\-−]?\s*\d+)\s*(AGI)\b/gi, m;
+      while((m = re.exec(f.desp || ""))){ var n = parseInt(m[1].replace("−", "-").replace(/\s/g, ""), 10); if(!isNaN(n)){ agi += n; } }
+    }
+    return Math.max(0, 5 + Math.max(0, agi));
+  }
   function applyF(rows){
     var changed = false;
     rows.forEach(function(f){
       var o = F[f.id] || {};
       o.nome = f.nome || "Sem nome"; o.owner_id = f.owner_id; o.ownerName = (f.profiles && f.profiles.display_name) || "";
       if(f.portrait !== undefined){ o.portrait = f.portrait || ""; }
+      o.desl = deslOf(f);
       if(!pend[f.id] && !busy[f.id]){   // não sobrescreve um valor que o mestre acabou de mudar
         o.hp = num(f.hp); o.hpm = num(f.hpm); o.est = num(f.est); o.estm = num(f.estm);
       }
@@ -594,7 +680,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
   function refreshStats(){
     if(!C.parts.length || drag){ return; }
     var ids = C.parts.map(function(p){ return p.id; });
-    sb.from("fichas").select("id,nome,owner_id,hp:data->>hp,hpm:data->>hpm,est:data->>est,estm:data->>estm,profiles(display_name)").in("id", ids).then(function(r){
+    sb.from("fichas").select("id,nome,owner_id," + STATS + ",profiles(display_name)").in("id", ids).then(function(r){
       if(r.error || !r.data){ return; }
       if(applyF(r.data)){ persist(); }
       stamp(); render();
@@ -892,6 +978,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
       } catch(e){}
     }
     $("dc-url").value = DC_URL; dcSyncBtn();
+    fitBoard();
     return loadAll().then(function(){ if(C.parts.length){ persist(); } stamp(); });
   }).then(function(){
     if(!me){ return; }

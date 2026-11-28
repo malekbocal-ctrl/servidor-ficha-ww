@@ -53,8 +53,13 @@
     document.addEventListener("keydown", onKey);
     go.focus();
   }
+  /* Botões "Ir para o combate" (atributo data-ww-combate): só aparecem com combate ativo */
+  function links(on){
+    document.querySelectorAll("[data-ww-combate]").forEach(function(a){ a.hidden = !on; });
+  }
   function check(row){
-    if(!row){ return; }
+    if(!row){ links(false); return; }
+    links(!!row.ativo);
     if(!row.ativo){ if(box){ close(); } return; }   // combate encerrado: some o aviso
     if(!row.iniciado_em || row.iniciado_em === seen() || row.iniciado_em === shown){ return; }
     show(row);
@@ -72,8 +77,10 @@
         check(p.new);
       }).subscribe();
     } catch(e){}
-    // reforço caso o tempo real esteja desligado
-    pollT = setInterval(function(){ if(document.visibilityState === "visible"){ fetchRow(); } }, 15000);
+    // reforço caso o tempo real não chegue (rede, aba em segundo plano, etc.)
+    pollT = setInterval(fetchRow, 8000);
+    document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "visible"){ fetchRow(); } });
+    window.addEventListener("focus", fetchRow);
   }
   sb.auth.getSession().then(function(r){ if(r.data.session){ start(); } });
   sb.auth.onAuthStateChange(function(ev, s){ if(s){ setTimeout(start, 0); } });

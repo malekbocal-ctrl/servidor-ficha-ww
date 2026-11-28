@@ -65,6 +65,8 @@ h2.s{font-family:"Pirata One",Georgia,serif;font-weight:400;font-size:1.5rem;col
 h2.hrow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 h2.hrow .btn{font-family:"Alegreya Sans",system-ui,sans-serif;font-size:1rem;color:var(--gold);border-color:var(--gold)}
 h2.hrow .btn:hover{background:var(--gold);color:var(--panel)}
+.btn.ww-go{background:var(--gold);border-color:var(--gold);color:#14283b}
+.btn.ww-go:hover{background:var(--gold);color:#14283b;filter:brightness(1.1)}
 </style>
 </head>
 <body>
@@ -90,7 +92,7 @@ h2.hrow .btn:hover{background:var(--gold);color:var(--panel)}
   <section id="app" hidden>
     <div class="bar">
       <div class="who"><span id="uname"></span><span id="ubadge" class="badge" hidden>Mestre</span></div>
-      <button id="out" type="button">Sair</button>
+      <span style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn ww-go" href="combate.html" data-ww-combate hidden>⚔ Ir para o combate</a><button id="out" type="button">Sair</button></span>
     </div>
     <h2 class="s" style="margin-top:0">Minhas fichas</h2>
     <div id="mine" class="list"></div>
@@ -105,7 +107,7 @@ h2.hrow .btn:hover{background:var(--gold);color:var(--panel)}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="common.js"></script>
+<script src="common.js?v=2"></script>
 <script>
 (function(){
   function $(id){ return document.getElementById(id); }
