@@ -148,6 +148,8 @@ input[type=range]::-moz-range-thumb{width:6px;height:26px;border-radius:2px;bord
 .dcp input{flex:1 1 280px;min-width:0;font:inherit;font-size:.95rem;padding:5px 8px;color:var(--ink);background:var(--bg);border:1px solid var(--line)}
 .dcp input:focus-visible{outline:2px solid var(--sea);outline-offset:-1px}
 .dcp .st{flex:1 0 100%;font-size:.9rem;color:var(--muted)}
+.dcp .dck{flex:1 1 280px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:.95rem;cursor:pointer}
+.dcp .dck input{flex:none;width:18px;height:18px;padding:0;accent-color:var(--sea)}
 .dcp .st.ok{color:var(--fillb)} .dcp .st.err{color:var(--red)}
 .tools button.on{color:var(--fillb);border-color:var(--fillb)}
 .res .dc{display:block;margin-top:2px;font-size:.85rem;font-weight:400;color:var(--muted)}
@@ -352,18 +354,12 @@ body:not(.play) .item.awake .use{display:none}
 
   <div id="dc-panel" class="dcp" hidden>
     <div class="dcg">
-      <div class="tt">Rolagens (ataque e dano)</div>
-      <input id="dc-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="URL do webhook do Discord (https://discord.com/api/webhooks/...)" aria-label="URL do webhook das rolagens">
-      <button id="dc-save" class="mini" type="button">Salvar</button>
+      <label class="dck"><input id="dc-on" type="checkbox"> Enviar rolagens (ataque e dano) ao canal de rolagens</label>
       <button id="dc-test" class="mini" type="button">Testar</button>
-      <button id="dc-clear" class="mini" type="button">Remover</button>
       <div id="dc-st" class="st" role="status" aria-live="polite"></div>
     </div>
     <div class="dcg">
-      <div class="tt">Status em tempo real (Vida, Estamina e Despertado), em um canal separado</div>
-      <input id="st-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="URL do webhook do canal de status" aria-label="URL do webhook do status">
-      <button id="st-save" class="mini" type="button">Salvar</button>
-      <button id="st-clear" class="mini" type="button">Remover</button>
+      <label class="dck"><input id="st-on" type="checkbox"> Status em tempo real (Vida, Estamina e Despertado) no canal de status</label>
       <div id="st-st" class="st" role="status" aria-live="polite"></div>
     </div>
   </div>
@@ -527,7 +523,7 @@ body:not(.play) .item.awake .use{display:none}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="common.js?v=2"></script>
+<script src="common.js?v=3"></script>
 <script>
 (function(){
   var msg = document.getElementById("boot-msg"), main = document.getElementById("sheet-main");
@@ -555,7 +551,7 @@ body:not(.play) .item.awake .use{display:none}
       });
     }
     window.CLOUD = {
-      data: r.data.data, portrait: r.data.portrait || "", armed: false,
+      id: id, data: r.data.data, portrait: r.data.portrait || "", armed: false,
       save: function(obj){
         if(!this.armed){ return; }
         pending = obj; say("Salvando…");
@@ -572,7 +568,7 @@ body:not(.play) .item.awake .use{display:none}
     document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden"){ flush(); } });
     window.addEventListener("pagehide", function(){ flush(); });
     var s = document.createElement("script");
-    s.src = "sheet.js?v=8";
+    s.src = "sheet.js?v=9";
     s.onload = function(){ window.CLOUD.armed = true; msg.hidden = true; main.classList.remove("loading"); say("Salvo na nuvem ✓", "ok"); };
     s.onerror = function(){ fail("Não foi possível carregar o arquivo sheet.js."); };
     document.body.appendChild(s);

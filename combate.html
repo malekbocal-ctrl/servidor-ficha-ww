@@ -55,6 +55,8 @@ button:focus-visible,.btn:focus-visible,input:focus-visible{outline:2px solid va
 .dcp .tt{flex:1 0 100%;font-weight:700;font-size:.95rem}
 .dcp input{flex:1 1 300px;min-width:0;font:inherit;font-size:.95rem;padding:5px 8px;color:var(--ink);background:var(--bg);border:1px solid var(--line)}
 .dcp .st{flex:1 0 100%;font-size:.9rem;color:var(--muted)}
+.dcp .dck{flex:1 1 260px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:.95rem;cursor:pointer}
+.dcp .dck input{flex:none;width:18px;height:18px;padding:0;accent-color:var(--sea)}
 .dcp .st.ok{color:var(--fillb)} .dcp .st.err{color:var(--red)}
 
 .lay{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
@@ -150,11 +152,10 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
   </div>
 
   <div id="dc-panel" class="dcp m-only" hidden>
-    <div class="tt">Tabuleiro no Discord (mensagem atualizada em tempo real)</div>
-    <input id="dc-url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="URL do webhook do canal (https://discord.com/api/webhooks/...)" aria-label="URL do webhook do canal do combate">
-    <button id="dc-save" class="mini" type="button">Salvar</button>
+    <div class="tt">Tabuleiro no Discord (o bot cria a mensagem e a atualiza em tempo real)</div>
+    <label class="dck"><input id="dc-on" type="checkbox"> Atualizar o Discord a partir desta página</label>
     <button id="dc-send" class="mini" type="button">Enviar agora</button>
-    <button id="dc-clear" class="mini" type="button">Remover</button>
+    <a class="btn mini" href="index.html#discord">Escolher canais</a>
     <div id="dc-st" class="st" role="status" aria-live="polite"></div>
   </div>
 
@@ -198,7 +199,7 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="common.js?v=2"></script>
+<script src="common.js?v=3"></script>
 <script>
 (function(){
   var N = 20, OLDKEY = "wanted-warriors-combate", ZKEY = "wanted-warriors-combate-zoom", SEEN = "wanted-warriors-combate-visto";
@@ -756,34 +757,29 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
   /* =====================================================================
      Discord: uma mensagem com o tabuleiro, editada a cada mudança
      ===================================================================== */
-  var DCKEY = "wanted-warriors-combate-discord", DCMSG = "wanted-warriors-combate-discord-msg";
-  var DC_URL = "", dcMsg = {url:"", id:"", combat:""}, dcT = null, dcBusy = false, dcAgain = false, dcLast = "";
+  /* Tudo passa pelo bot (window.WW_DISCORD, em common.js). O canal é escolhido na tela de Fichas. */
+  var DCON = "wanted-warriors-combate-discord-on", DC_ON = true, DCFG = null;
+  var dcT = null, dcBusy = false, dcAgain = false, dcLast = "";
   try {
-    DC_URL = localStorage.getItem(DCKEY) || "";
-    var dm0 = JSON.parse(localStorage.getItem(DCMSG) || "null"); if(dm0){ dcMsg = dm0; }
+    DC_ON = localStorage.getItem(DCON) !== "0";
+    // a versão antiga guardava a URL de um webhook: não serve mais
+    localStorage.removeItem("wanted-warriors-combate-discord"); localStorage.removeItem("wanted-warriors-combate-discord-msg");
   } catch(e){}
-  function dcSay(t, c){ var e = $("dc-st"); e.textContent = t; e.className = "st" + (c ? " " + c : ""); }
-  function dcCheck(v){
-    if(!v){ return "Cole a URL do webhook."; }
-    if(!/^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w\-]+\/?$/i.test(v)){
-      return "Essa não parece uma URL de webhook do Discord (https://discord.com/api/webhooks/número/token).";
-    }
-    return "";
-  }
-  function dcBase(){ return DC_URL.replace(/\/$/, ""); }
-  function dcErr(st, body){
-    var j = {}; try { j = JSON.parse(body); } catch(e){}
-    var det = j.message ? " (" + j.message + ")" : "";
-    if(st === 401 || st === 404){ return "o Discord não encontrou o webhook: ele foi excluído ou a URL está errada" + det + "."; }
-    if(st === 429){ return "muitas atualizações seguidas; o Discord pediu para esperar um pouco."; }
-    if(st === 413){ return "a imagem ficou grande demais."; }
-    return "erro " + st + det + ".";
-  }
-  function dcSyncBtn(){ $("dc-btn").classList.toggle("on", !!DC_URL); }
+  function dcSay(t, c){ var e = $("dc-st"); if(e){ e.textContent = t; e.className = "st" + (c ? " " + c : ""); } }
+  function dcBot(){ return window.WW_DISCORD || null; }
+  function dcReady(){ return DC_ON && !!(DCFG && DCFG.canal_combate) && !!dcBot(); }
+  function dcSyncBtn(){ if($("dc-btn")){ $("dc-btn").classList.toggle("on", dcReady()); } }
   function dcIdle(){
-    if(!DC_URL){ dcSay("Cole a URL de um webhook do canal do combate. Fica salva só neste navegador."); }
-    else if(!ROW.ativo){ dcSay("Webhook salvo. A mensagem é criada quando você clicar em “Iniciar combate”.", "ok"); }
-    else { dcSay("Webhook salvo. A mensagem do combate é atualizada a cada mudança.", "ok"); }
+    if(!dcBot()){ dcSay("O bot do Discord não está disponível nesta página.", "err"); }
+    else if(!DCFG){ dcSay("O bot do Discord ainda não foi configurado no Supabase (veja o PASSO-A-PASSO)."); }
+    else if(!DCFG.canal_combate){ dcSay("Escolha o canal do combate na tela de Fichas, em “Discord”."); }
+    else if(!DC_ON){ dcSay("Desligado: esta página não atualiza o Discord."); }
+    else if(!ROW.ativo){ dcSay("Pronto. A mensagem é criada quando você clicar em “Iniciar combate”.", "ok"); }
+    else { dcSay("A mensagem do combate é atualizada a cada mudança.", "ok"); }
+  }
+  /* o bot lê o combate salvo no banco: espera a última gravação terminar */
+  function waitSaved(){
+    return new Promise(function(ok){ (function chk(){ if(!saveT && !saving){ ok(); } else { setTimeout(chk, 120); } })(); });
   }
 
   /* desenho do tabuleiro em PNG */
@@ -847,67 +843,18 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
       return new Promise(function(ok){ cv.toBlob(function(b){ ok(b); }, "image/png"); });
     });
   }
-  function dcPayload(){
-    var o = order(), cur = C.turn ? info(C.turn) : null;
-    var content = cur ? "⚔️ **Rodada " + C.round + "** · vez de **" + cur.nome + "**"
-                      : "⚔️ **Combate iniciado!** Aguardando o primeiro turno.";
-    var lines = o.map(function(p){
-      var i = info(p.id), mark = p.id === C.turn ? "▶️" : "▫️";
-      var hp = i.hp === null || i.hp === undefined ? "—" : i.hp;
-      return mark + " **" + i.nome + "** · inic. " + (p.ini === null ? "—" : p.ini) + " · ❤️ " + hp + "/" + (i.hpm || "—") + (i.hp === 0 ? " 💀" : "");
-    });
-    return {
-      content: content,
-      allowed_mentions: {parse: []},
-      embeds: [{
-        title: "Ordem de iniciativa",
-        description: (lines.join("\n") || "Ninguém no combate.").slice(0, 3900),
-        color: 0xd9a846,
-        image: {url: "attachment://tabuleiro.png"}
-      }],
-      /* Botão "Próximo turno": só aparece quando o webhook foi criado pelo bot
-         (veja o LEIAME). Em webhook comum o Discord simplesmente ignora. */
-      components: [{type: 1, components: [{type: 2, style: 1, label: "Próximo turno ▶", custom_id: "ww_next"}]}],
-      attachments: [{id: 0, filename: "tabuleiro.png"}]
-    };
-  }
-  function dcRequest(method, url, payload, blob){
-    var fd = new FormData();
-    fd.append("payload_json", JSON.stringify(payload));
-    if(blob){ fd.append("files[0]", blob, "tabuleiro.png"); }
-    var p;
-    try { p = fetch(url, {method: method, body: fd}); }
-    catch(e){ return Promise.reject(new Error("sem conexão com o Discord.")); }
-    return p.then(function(r){
-      if(r.ok){ return r.json().catch(function(){ return null; }); }
-      return r.text().then(function(b){ var e = new Error(dcErr(r.status, b)); e.status = r.status; throw e; });
-    }, function(){ throw new Error("sem conexão com o Discord (internet, bloqueador ou rede da página)."); });
-  }
   function dcSchedule(now){
-    if(!DC_URL || !ROW.ativo || !me || !me.master){ return; }
+    if(!me || !me.master || !ROW.ativo || !dcReady()){ return; }
     clearTimeout(dcT); dcT = setTimeout(dcSync, now ? 0 : 1500);
   }
   function dcSync(){
-    if(!DC_URL || !ROW.ativo){ return Promise.resolve(); }
+    if(!dcReady() || !ROW.ativo){ return Promise.resolve(); }
     if(dcBusy){ dcAgain = true; return Promise.resolve(); }
-    var payload = dcPayload();
-    var sig = JSON.stringify([payload, C.parts, Object.keys(C.info).map(function(k){ return C.info[k].pk || ""; })]);
-    var same = dcMsg.id && dcMsg.url === DC_URL && dcMsg.combat === ROW.iniciado_em;
-    if(same && sig === dcLast){ return Promise.resolve(); }
+    var sig = JSON.stringify([ROW.iniciado_em, C.round, C.turn, C.parts, Object.keys(C.info).map(function(k){ var i = C.info[k]; return [k, i.pk || "", i.nome, i.hp, i.hpm]; })]);
+    if(sig === dcLast){ return Promise.resolve(); }
     dcBusy = true; dcSay("Atualizando a mensagem no Discord…");
-    var combat = ROW.iniciado_em;
-    return drawBoard().then(function(blob){
-      function create(){
-        return dcRequest("POST", dcBase() + "?wait=true", payload, blob).then(function(m){
-          dcMsg = {url: DC_URL, id: m && m.id || "", combat: combat};
-          try { localStorage.setItem(DCMSG, JSON.stringify(dcMsg)); } catch(e){}
-        });
-      }
-      if(!same){ return create(); }
-      return dcRequest("PATCH", dcBase() + "/messages/" + dcMsg.id, payload, blob).catch(function(e){
-        if(e.status === 404){ return create(); }   // mensagem apagada no canal: cria outra
-        throw e;
-      });
+    return waitSaved().then(drawBoard).then(function(blob){
+      return dcBot().enviar("combate", {}, blob);
     }).then(function(){
       dcLast = sig;
       var d = new Date(), z = function(n){ return (n < 10 ? "0" : "") + n; };
@@ -920,34 +867,25 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
     });
   }
   function dcFinish(round){
-    if(!DC_URL || !dcMsg.id || dcMsg.url !== DC_URL){ return; }
-    clearTimeout(dcT);
-    var payload = {content: "🏁 **Combate encerrado** na rodada " + round + ".", allowed_mentions: {parse: []}, embeds: [], attachments: []};
-    dcRequest("PATCH", dcBase() + "/messages/" + dcMsg.id, payload, null)
+    clearTimeout(dcT); dcLast = "";
+    if(!dcBot() || !(DCFG && DCFG.canal_combate)){ return; }
+    dcBot().enviar("combate_fim", {rodada: round})
       .then(function(){ dcSay("Mensagem do Discord marcada como encerrada.", "ok"); })
       .catch(function(e){ dcSay("Falha ao atualizar o Discord: " + e.message, "err"); });
-    dcMsg = {url:"", id:"", combat:""}; dcLast = "";
-    try { localStorage.removeItem(DCMSG); } catch(e){}
   }
   $("dc-btn").addEventListener("click", function(){
     var pn = $("dc-panel"); pn.hidden = !pn.hidden; $("dc-btn").setAttribute("aria-expanded", String(!pn.hidden));
-    if(!pn.hidden){ dcIdle(); $("dc-url").focus(); }
+    if(!pn.hidden){ dcIdle(); }
   });
-  $("dc-save").addEventListener("click", function(){
-    var v = $("dc-url").value.trim(), er = dcCheck(v);
-    if(er){ dcSay(er, "err"); return; }
-    DC_URL = v; try { localStorage.setItem(DCKEY, v); } catch(e){}
-    dcSyncBtn(); dcIdle(); dcSchedule(true);
+  $("dc-on").addEventListener("change", function(){
+    DC_ON = $("dc-on").checked;
+    try { localStorage.setItem(DCON, DC_ON ? "1" : "0"); } catch(e){}
+    dcSyncBtn(); dcIdle(); dcLast = ""; dcSchedule(true);
   });
   $("dc-send").addEventListener("click", function(){
-    if(!DC_URL){ dcSay("Salve a URL do webhook primeiro.", "err"); return; }
+    if(!dcReady()){ dcIdle(); return; }
     if(!ROW.ativo){ dcSay("Inicie o combate para criar a mensagem no Discord.", "err"); return; }
     dcLast = ""; dcSync();
-  });
-  $("dc-clear").addEventListener("click", function(){
-    DC_URL = ""; $("dc-url").value = ""; dcMsg = {url:"", id:"", combat:""}; dcLast = "";
-    try { localStorage.setItem(DCKEY, ""); localStorage.removeItem(DCMSG); } catch(e){}
-    dcSyncBtn(); dcIdle();
   });
 
   /* ---- Início ---- */
@@ -978,7 +916,8 @@ dialog::backdrop{background:rgba(0,0,0,.5)}
         localStorage.removeItem(OLDKEY);
       } catch(e){}
     }
-    $("dc-url").value = DC_URL; dcSyncBtn();
+    $("dc-on").checked = DC_ON; dcSyncBtn();
+    if(dcBot()){ dcBot().canais().then(function(c){ DCFG = c; dcSyncBtn(); dcIdle(); dcSchedule(); }); } else { dcIdle(); }
     fitBoard();
     return loadAll().then(function(){ if(C.parts.length){ persist(); } stamp(); });
   }).then(function(){

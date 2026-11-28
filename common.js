@@ -8,6 +8,46 @@
   window.sb = window.supabase.createClient(c.SUPABASE_URL, c.SUPABASE_ANON_KEY);
 })();
 
+/* Bot do Discord: o site pede e a função discord-bot (no Supabase) envia.
+   O token do bot fica só no Supabase; nada de webhook no navegador. */
+(function(){
+  var sb = window.sb, c = window.WW_CONFIG;
+  if(!sb){ return; }
+  var URL_BOT = c.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/discord-bot", cfgP = null;
+  window.WW_DISCORD = {
+    /* canais escolhidos pelo mestre: {canal_combate, canal_rolagens, canal_status} ou null */
+    canais: function(force){
+      if(!cfgP || force){
+        cfgP = sb.from("discord_config").select("canal_combate,canal_rolagens,canal_status").eq("id", 1).maybeSingle()
+          .then(function(r){ return r.error ? null : (r.data || null); }, function(){ return null; });
+      }
+      return cfgP;
+    },
+    enviar: function(acao, dados, imagem){
+      return sb.auth.getSession().then(function(r){
+        var s = r.data.session;
+        if(!s){ throw new Error("sessão expirada; entre de novo no site."); }
+        var headers = {Authorization: "Bearer " + s.access_token, apikey: c.SUPABASE_ANON_KEY}, body;
+        if(imagem){
+          body = new FormData();
+          body.append("acao", acao); body.append("dados", JSON.stringify(dados || {})); body.append("imagem", imagem, "tabuleiro.png");
+        } else {
+          headers["Content-Type"] = "application/json";
+          var o = {acao: acao}; Object.keys(dados || {}).forEach(function(k){ o[k] = dados[k]; });
+          body = JSON.stringify(o);
+        }
+        return fetch(URL_BOT, {method: "POST", headers: headers, body: body}).then(function(resp){
+          return resp.json().catch(function(){ return {}; }).then(function(j){
+            if(resp.ok && j.ok){ return j; }
+            var m = j.erro || (resp.status === 404 ? "a função discord-bot ainda não foi criada no Supabase." : "erro " + resp.status + " no bot.");
+            var e = new Error(m); e.status = resp.status; throw e;
+          });
+        }, function(){ throw new Error("sem conexão com o bot (internet ou bloqueador)."); });
+      });
+    }
+  };
+})();
+
 /* Aviso de combate: quando o mestre inicia um combate, aparece um pop-up
    em qualquer página do site (menos na própria página do combate). */
 (function(){

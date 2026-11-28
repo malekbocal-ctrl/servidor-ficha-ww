@@ -701,57 +701,32 @@ function mkItem(sec, it){
   return d;
 }
 
-var DCKEY = "wanted-warriors-discord";
-var DC_URL = "";
-try { var dcs = localStorage.getItem(DCKEY); if(dcs !== null){ DC_URL = dcs; } } catch(e){}
-function dcCheck(v){
-  if(!v){ return "Cole a URL do webhook."; }
-  if(!/^https:\/\//i.test(v)){ return "A URL precisa começar com https://"; }
-  if(!/^https:\/\/(?:(?:canary|ptb)\.)?discord(?:app)?\.com\//i.test(v)){ return "O endereço não é do Discord (esperado: https://discord.com/api/webhooks/...)."; }
-  if(v.indexOf("/api/webhooks/") < 0){ return "Faltou o trecho /api/webhooks/ na URL. Copie o link pelo botão “Copiar URL do Webhook” no Discord."; }
-  if(!/\/api\/webhooks\/\d+\//.test(v)){ return "O número do webhook (ID) está ausente ou incorreto na URL."; }
-  if(!/\/api\/webhooks\/\d+\/[\w\-]+\/?$/.test(v)){ return "O token no final da URL está ausente ou contém caracteres inválidos (a URL pode estar cortada ou ter texto extra)."; }
-  return "";
-}
+/* Discord: tudo passa pelo bot (window.WW_DISCORD, em common.js). Os canais são escolhidos
+   pelo mestre na tela de Fichas. Aqui cada um só liga ou desliga o envio neste navegador. */
+var DCON = "wanted-warriors-discord-rolagens", STON = "wanted-warriors-discord-status-on";
+var DC_ON = true, ST_ON = true, DCFG = null;
+try {
+  DC_ON = localStorage.getItem(DCON) !== "0";
+  ST_ON = localStorage.getItem(STON) !== "0";
+  // a versão antiga guardava URLs de webhook: não servem mais
+  localStorage.removeItem("wanted-warriors-discord"); localStorage.removeItem("wanted-warriors-discord-status"); localStorage.removeItem("wanted-warriors-discord-status-msg");
+} catch(e){}
+var stBusy = false, stDirty = false, stLast = "", stTimer = null;
 function charName(){ return (S.ident && S.ident.nome || "").trim() || "Personagem"; }
-var DC_NET = "Não foi possível conectar ao Discord. Verifique a internet, se alguma extensão/bloqueador impede acesso a discord.com ou se esta página está aberta em um ambiente que bloqueia conexões externas (como uma pré-visualização). Abra o arquivo direto no navegador.";
-function dcHttp(st, body){
-  var j = {}; try { j = JSON.parse(body); } catch(e){}
-  var det = j.message ? " Resposta do Discord: " + j.message + (j.code ? " (código " + j.code + ")" : "") + "." : "";
-  if(st === 401){ return "O Discord recusou o token do webhook (erro 401): a URL está incorreta ou foi regenerada." + det; }
-  if(st === 404){ return "Webhook não encontrado (erro 404): ele foi excluído ou a URL está errada. Crie um novo no canal." + det; }
-  if(st === 429){ return "Muitas mensagens em pouco tempo (erro 429). Aguarde" + (j.retry_after ? " cerca de " + Math.ceil(j.retry_after) + " s" : " um instante") + " e tente de novo."; }
-  if(st === 400){ return "O Discord recusou a mensagem (erro 400)." + det; }
-  if(st === 403){ return "Sem permissão para postar nesse webhook (erro 403)." + det; }
-  if(st >= 500){ return "O Discord está com problemas no momento (erro " + st + "). Tente novamente mais tarde."; }
-  return "Erro " + st + " ao enviar ao Discord." + det;
-}
+function dcBot(){ return window.WW_DISCORD || null; }
+function dcRolagens(){ return DC_ON && !!(DCFG && DCFG.canal_rolagens) && !!dcBot(); }
+function dcStatus(){ return ST_ON && !!(DCFG && DCFG.canal_status) && !!dcBot(); }
 function dcPost(text){
-  var p;
-  try {
-    p = fetch(DC_URL, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({content: text.slice(0, 1900), allowed_mentions: {parse: []}})
-    });
-  } catch(e){ return Promise.reject(new Error(DC_NET)); }
-  return p.then(function(r){
-    if(r.ok){ return; }
-    return r.text().then(function(b){ throw new Error(dcHttp(r.status, b)); }, function(){ throw new Error(dcHttp(r.status, "")); });
-  }, function(){ throw new Error(DC_NET); });
+  if(!dcBot()){ return Promise.reject(new Error("bot indisponível.")); }
+  return dcBot().enviar("rolagem", {ficha: CLOUD.id, texto: text.slice(0, 1900)});
 }
 function dcSend(text, resEl){
-  if(!DC_URL){ return; }
+  if(!dcRolagens()){ return; }
   var n = el("span", "dc"); n.textContent = "Enviando ao Discord…"; resEl.appendChild(n);
   dcPost(text).then(function(){ n.textContent = "Enviado ao Discord ✓"; })
     .catch(function(e){ n.textContent = "Falha ao enviar ao Discord: " + e.message; });
 }
 
-var STKEY = "wanted-warriors-discord-status", STMSG = "wanted-warriors-discord-status-msg";
-var ST_URL = "", stMsg = {url:"", id:""}, stBusy = false, stDirty = false, stLast = "", stTimer = null;
-try {
-  var sts = localStorage.getItem(STKEY); if(sts !== null){ ST_URL = sts; }
-  var stm = JSON.parse(localStorage.getItem(STMSG) || "null"); if(stm && stm.url === ST_URL){ stMsg = stm; }
-} catch(e){}
 function stSay(t, c){
   var e = document.getElementById("st-st"); if(!e){ return; }
   e.textContent = t; e.className = "st" + (c ? " " + c : "");
@@ -765,40 +740,13 @@ function stText(){
     "\n⚡ Estamina: " + est.value + "/" + est.max + " " + stBar(+est.value, +est.max) +
     "\n" + (awakened ? "🔥 **Despertado**" : "Estado: normal");
 }
-function stReq(method, url, body){
-  var p;
-  try {
-    p = fetch(url, {method: method, headers: {"Content-Type": "application/json"}, body: body ? JSON.stringify(body) : undefined});
-  } catch(e){ return Promise.reject(new Error(DC_NET)); }
-  return p.then(function(r){
-    if(r.ok){ return r.status === 204 ? null : r.json(); }
-    return r.text().then(function(b){ var e = new Error(dcHttp(r.status, b)); e.status = r.status; throw e; },
-                         function(){ var e = new Error(dcHttp(r.status, "")); e.status = r.status; throw e; });
-  }, function(){ throw new Error(DC_NET); });
-}
-function stBase(){ return ST_URL.replace(/\/$/, ""); }
 function stRun(force){
-  if(!ST_URL){ return Promise.resolve(); }
+  if(!dcStatus()){ return Promise.resolve(); }
   if(stBusy){ stDirty = true; return Promise.resolve(); }
   var txt = stText();
   if(!force && txt === stLast){ return Promise.resolve(); }
-  var body = {content: txt, allowed_mentions: {parse: []}};
-  function create(){
-    return stReq("POST", stBase() + "?wait=true", body).then(function(m){
-      if(m && m.id){
-        stMsg = {url: ST_URL, id: m.id};
-        try { localStorage.setItem(STMSG, JSON.stringify(stMsg)); } catch(e){}
-      }
-    });
-  }
   stBusy = true;
-  var p = (stMsg.id && stMsg.url === ST_URL)
-    ? stReq("PATCH", stBase() + "/messages/" + stMsg.id, body).catch(function(e){
-        if(e.status === 404){ stMsg = {url: ST_URL, id: ""}; return create(); }
-        throw e;
-      })
-    : create();
-  return p.then(function(){
+  return dcBot().enviar("status", {ficha: CLOUD.id, texto: txt}).then(function(){
     stLast = txt;
     var d = new Date(), z = function(n){ return (n < 10 ? "0" : "") + n; };
     stSay("Status atualizado às " + z(d.getHours()) + ":" + z(d.getMinutes()) + ":" + z(d.getSeconds()) + ".", "ok");
@@ -806,7 +754,7 @@ function stRun(force){
     .then(function(){ stBusy = false; if(stDirty){ stDirty = false; stSchedule(); } });
 }
 function stSchedule(){
-  if(!ST_URL){ return; }
+  if(!dcStatus()){ return; }
   clearTimeout(stTimer);
   stTimer = setTimeout(function(){ stRun(false); }, 1000);
 }
@@ -948,60 +896,55 @@ function resetUses(secs){
 document.getElementById("reset-uses").addEventListener("click", function(){ resetUses(["ativas"]); show(); });
 (function(){
   var btn = document.getElementById("dc-btn"), pn = document.getElementById("dc-panel"),
-      inp = document.getElementById("dc-url"), st = document.getElementById("dc-st");
+      con = document.getElementById("dc-on"), son = document.getElementById("st-on"), st = document.getElementById("dc-st");
   function say(t, c){ st.textContent = t; st.className = "st" + (c ? " " + c : ""); }
-  function sync(){ btn.classList.toggle("on", !!(DC_URL || ST_URL)); }
+  function sync(){ btn.classList.toggle("on", dcRolagens() || dcStatus()); }
   function idle(){
-    if(!DC_URL){ say("Cole a URL de um webhook (Configurações do canal → Integrações → Webhooks). Ela fica salva só neste navegador."); }
-    else { say("Webhook configurado: ataques e danos são enviados ao Discord.", "ok"); }
+    if(!dcBot()){ say("O bot do Discord não está disponível nesta página.", "err"); }
+    else if(!DCFG){ say("O bot do Discord ainda não foi configurado no Supabase (veja o PASSO-A-PASSO)."); }
+    else if(!DCFG.canal_rolagens){ say("O mestre ainda não escolheu o canal de rolagens (tela de Fichas → Discord)."); }
+    else if(!DC_ON){ say("Rolagens desta ficha não vão para o Discord neste navegador."); }
+    else { say("Ataques e danos rolados aqui vão para o canal de rolagens.", "ok"); }
+    if(!DCFG || !DCFG.canal_status){ stSay("O mestre ainda não escolheu o canal de status."); }
+    else if(!ST_ON){ stSay("Status desligado neste navegador."); }
+    else if(!stLast){ stSay("Status ligado: a mensagem é atualizada quando Vida, Estamina ou Despertado mudam.", "ok"); }
   }
-  inp.value = DC_URL; sync(); idle();
+  con.checked = DC_ON; son.checked = ST_ON;
+  con.disabled = son.disabled = true;
+  sync(); idle();
+  if(dcBot()){
+    dcBot().canais().then(function(c){
+      DCFG = c;
+      con.disabled = !(c && c.canal_rolagens); son.disabled = !(c && c.canal_status);
+      sync(); idle(); stRun(false);
+    });
+  }
   btn.addEventListener("click", function(){
     pn.hidden = !pn.hidden; btn.setAttribute("aria-expanded", String(!pn.hidden));
-    if(!pn.hidden){ inp.focus(); }
   });
-  document.getElementById("dc-save").addEventListener("click", function(){
-    var v = inp.value.trim(), er = dcCheck(v);
-    if(er){ say(er, "err"); return; }
-    DC_URL = v;
-    try { localStorage.setItem(DCKEY, v); } catch(e){}
+  con.addEventListener("change", function(){
+    DC_ON = con.checked;
+    try { localStorage.setItem(DCON, DC_ON ? "1" : "0"); } catch(e){}
     sync(); idle();
   });
   document.getElementById("dc-test").addEventListener("click", function(){
-    var v = inp.value.trim(), er = dcCheck(v);
-    if(er){ say(er, "err"); return; }
-    var old = DC_URL; DC_URL = v; say("Enviando teste…");
+    if(!(DCFG && DCFG.canal_rolagens)){ idle(); return; }
+    say("Enviando teste…");
     dcPost("✅ Ficha **" + charName() + "** conectada ao Discord.")
-      .then(function(){ say("Teste enviado com sucesso. Confira o canal no Discord.", "ok"); })
-      .catch(function(e){ say("Falha no teste: " + e.message, "err"); })
-      .then(function(){ DC_URL = old; });
+      .then(function(){ say("Teste enviado com sucesso. Confira o canal de rolagens.", "ok"); })
+      .catch(function(e){ say("Falha no teste: " + e.message, "err"); });
   });
-  document.getElementById("dc-clear").addEventListener("click", function(){
-    DC_URL = ""; inp.value = "";
-    try { localStorage.setItem(DCKEY, ""); } catch(e){}
-    sync(); idle();
-  });
-
-  var sin = document.getElementById("st-url");
-  sin.value = ST_URL;
-  if(ST_URL){ stSay("Status ativo: a mensagem é atualizada sempre que Vida, Estamina ou Despertado mudarem.", "ok"); }
-  else { stSay("Cole a URL de um webhook de outro canal. A ficha cria uma mensagem de status e a edita sempre que algo mudar."); }
-  sync();
-  document.getElementById("st-save").addEventListener("click", function(){
-    var v = sin.value.trim(), er = dcCheck(v);
-    if(er){ stSay(er, "err"); return; }
-    if(v !== ST_URL){ stMsg = {url: v, id: ""}; }
-    ST_URL = v; stLast = "";
-    try { localStorage.setItem(STKEY, v); localStorage.setItem(STMSG, JSON.stringify(stMsg)); } catch(e){}
-    sync(); stSay("Enviando status…"); stRun(true);
-  });
-  document.getElementById("st-clear").addEventListener("click", function(){
-    var old = stBase(), id = stMsg.id;
-    clearTimeout(stTimer);
-    ST_URL = ""; sin.value = ""; stMsg = {url: "", id: ""}; stLast = "";
-    try { localStorage.setItem(STKEY, ""); localStorage.removeItem(STMSG); } catch(e){}
-    if(old && id){ try { fetch(old + "/messages/" + id, {method: "DELETE"}).catch(function(){}); } catch(e){} }
-    sync(); stSay("Status removido. A mensagem de status foi apagada do canal, se possível.");
+  son.addEventListener("change", function(){
+    ST_ON = son.checked;
+    try { localStorage.setItem(STON, ST_ON ? "1" : "0"); } catch(e){}
+    clearTimeout(stTimer); stLast = "";
+    sync();
+    if(ST_ON){ stSay("Enviando status…"); stRun(true); }
+    else if(dcBot()){
+      dcBot().enviar("status_remover", {ficha: CLOUD.id})
+        .then(function(){ stSay("Status desligado. A mensagem de status foi apagada do canal."); })
+        .catch(function(e){ stSay("Status desligado, mas não deu para apagar a mensagem: " + e.message, "err"); });
+    }
   });
 })();
 (function(){
